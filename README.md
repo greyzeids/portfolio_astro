@@ -6,7 +6,7 @@ El proyecto está construido sobre **Astro** para garantizar un rendimiento web 
 
 ## 🌐 Demo en Vivo
 
-Puedes experimentar la versión desplegada aquí: **[portfolio-astro-ruby.vercel.app](https://portfolio-astro-ruby.vercel.app/)**
+Puedes experimentar la versión desplegada aquí: **[portfolio-astro-ruby.vercel.app](https://portfolio-astro-ruby-six.vercel.app/)**
 
 ## ✨ Características Principales
 
