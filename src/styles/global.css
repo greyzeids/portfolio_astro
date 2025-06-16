@@ -1,0 +1,325 @@
+/* style.css - Apto para Múltiples Páginas (CON CORRECCIÓN DE TRANSPARENCIA) */
+
+/* ----- ESTILOS GLOBALES Y RESET ----- */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #000033;
+    color: #e0e0e0;
+}
+
+/* ----- ESTILOS ESPECÍFICOS POR TIPO DE PÁGINA ----- */
+body.game-body {
+    overflow: hidden;
+    height: 100vh;
+}
+body.content-body {
+    overflow-y: scroll;
+}
+
+/* ----- CANVAS DE THREE.JS (Solo visible en game-body) ----- */
+#bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: -1;
+}
+
+/* ----- HEADER (Compartido en todas las páginas) ----- */
+.main-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 5%;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* MODIFICACIÓN 1: Fondo y filtro eliminados para transparencia total */
+}
+.main-header nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 25px;
+}
+.main-header nav a {
+    color: #f0f0f0;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: color 0.3s ease;
+}
+.main-header nav a:hover,
+.main-header nav a.active {
+    color: #8cb4ff;
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.header-actions .social-icon img {
+    width: 24px;
+    height: 24px;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+.header-actions .social-icon:hover img {
+    opacity: 1;
+}
+.connect-button-header {
+    padding: 8px 15px;
+    background-color: #8cb4ff;
+    color: #0a0a19;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+.connect-button-header:hover {
+    background-color: #a8c7ff;
+}
+
+/* ----- CONTENEDOR PARA PÁGINAS DE TEXTO (about.html, etc.) ----- */
+.content-container {
+    padding: 120px 5% 60px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+.content-container section {
+    margin-bottom: 60px;
+}
+.hero-section {
+    text-align: center;
+    margin-bottom: 80px;
+}
+.hero-section h1 {
+    font-size: 3rem;
+}
+.tagline {
+    font-size: 1.5rem;
+    color: #c0c0c0;
+}
+.sub-tagline {
+    font-size: 1.1rem;
+    color: #a0a0a0;
+}
+.content-container h2 {
+    font-size: 2.2rem;
+    margin-bottom: 20px;
+    color: #8cb4ff;
+}
+
+/* ----- EFECTO GLITCH (Copiado de tu versión original) ----- */
+
+/* 1. ESTILOS BASE DEL ENLACE */
+.main-header nav a.nav-glitch {
+    color: #f0f0f0;
+    text-decoration: none;
+    font-weight: 400;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    padding: 10px 15px;
+    position: relative;
+    transition: color 0.2s linear;
+}
+
+/* 2. CONFIGURACIÓN DE CAPAS (::before y ::after) */
+.main-header nav a.nav-glitch::before,
+.main-header nav a.nav-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 10px 15px;
+    /* MODIFICACIÓN 2: Fondo de las capas del glitch a transparente */
+    background-color: transparent;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    display: block;
+}
+
+/* 4. ESTADO DE INTERACCIÓN (Hover) */
+.main-header nav a.nav-glitch:hover {
+    /* El texto base permanece visible para legibilidad */
+}
+
+.main-header nav a.nav-glitch:hover::before {
+    text-shadow: 2px 2px #f000ff, -2px -2px #7000ff;
+    animation: hover-glitch-1 5s infinite linear alternate;
+}
+
+.main-header nav a.nav-glitch:hover::after {
+    text-shadow: -2px 2px #00e5ff, 2px -2px #0055ff;
+    animation: hover-glitch-2 4.5s infinite linear alternate;
+}
+
+/* 5. KEYFRAMES (Animaciones) - SIN CAMBIOS */
+@keyframes hover-glitch-1 {
+    0% {
+        clip-path: inset(35% 0 65% 0);
+        transform: translate(-1px, -1px);
+    }
+    5% {
+        clip-path: inset(78% 0 2% 0);
+        transform: translate(1px, 1px);
+    }
+    10% {
+        clip-path: inset(15% 0 55% 0);
+        transform: translate(-2px, 0px);
+    }
+    20% {
+        clip-path: inset(90% 0 5% 0);
+        transform: translate(1px, -1px);
+    }
+    30% {
+        clip-path: inset(30% 0 15% 0);
+        transform: translate(-1px, 1px);
+    }
+    40% {
+        clip-path: inset(5% 0 80% 0);
+        transform: translate(2px, -1px);
+    }
+    50% {
+        clip-path: inset(60% 0 30% 0);
+        transform: translate(-1px, 1px);
+    }
+    60% {
+        clip-path: inset(88% 0 8% 0);
+        transform: translate(2px, -1px);
+    }
+    70% {
+        clip-path: inset(25% 0 70% 0);
+        transform: translate(-2px, 0);
+    }
+    80% {
+        clip-path: inset(45% 0 46% 0);
+        transform: translate(1px, 0px);
+    }
+    90% {
+        clip-path: inset(70% 0 1% 0);
+        transform: translate(-1px, 1px);
+    }
+    100% {
+        clip-path: inset(18% 0 78% 0);
+        transform: translate(1px, 1px);
+    }
+}
+
+@keyframes hover-glitch-2 {
+    0% {
+        clip-path: inset(8% 0 88% 0);
+        transform: translate(1px, 1px);
+    }
+    5% {
+        clip-path: inset(50% 0 25% 0);
+        transform: translate(-1px, -1px);
+    }
+    10% {
+        clip-path: inset(22% 0 70% 0);
+        transform: translate(1px, 2px);
+    }
+    20% {
+        clip-path: inset(95% 0 2% 0);
+        transform: translate(-2px, -1px);
+    }
+    30% {
+        clip-path: inset(10% 0 65% 0);
+        transform: translate(1px, 0);
+    }
+    40% {
+        clip-path: inset(75% 0 10% 0);
+        transform: translate(-1px, -1px);
+    }
+    50% {
+        clip-path: inset(33% 0 40% 0);
+        transform: translate(1px, 1px);
+    }
+    60% {
+        clip-path: inset(5% 0 92% 0);
+        transform: translate(1px, -1px);
+    }
+    70% {
+        clip-path: inset(66% 0 8% 0);
+        transform: translate(-2px, 1px);
+    }
+    80% {
+        clip-path: inset(28% 0 58% 0);
+        transform: translate(1px, -1px);
+    }
+    90% {
+        clip-path: inset(82% 0 5% 0);
+        transform: translate(-1px, 0);
+    }
+    100% {
+        clip-path: inset(44% 0 44% 0);
+        transform: translate(1px, -1px);
+    }
+}
+/* ----- MIRA / CROSSHAIR ----- */
+
+#crosshair-container {
+    position: fixed;
+    pointer-events: none;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+/* Punto central de la mira */
+.crosshair-dot {
+    width: 3px;
+    height: 3px;
+    background-color: #00ff7f; /* Un verde neón muy de ciencia ficción */
+    box-shadow: 0 0 10px #00ff7f; /* Efecto de brillo */
+}
+
+/* Estilo base para las 4 esquinas */
+.crosshair-bracket {
+    position: absolute;
+    width: 15px; /* Ancho de la línea */
+    height: 15px; /* Alto de la línea */
+    border-style: solid;
+    border-color: #00ff7f;
+    box-shadow: 0 0 10px #00ff7f;
+}
+
+/* Posicionamiento y bordes para cada esquina */
+.top-left {
+    top: 0;
+    left: 0;
+    border-width: 2px 0 0 2px; /* Borde superior e izquierdo */
+}
+
+.top-right {
+    top: 0;
+    right: 0;
+    border-width: 2px 2px 0 0; /* Borde superior y derecho */
+}
+
+.bottom-left {
+    bottom: 0;
+    left: 0;
+    border-width: 0 0 2px 2px; /* Borde inferior e izquierdo */
+}
+
+.bottom-right {
+    bottom: 0;
+    right: 0;
+    border-width: 0 2px 2px 0; /* Borde inferior y derecho */
+}

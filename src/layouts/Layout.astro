@@ -1,0 +1,44 @@
+---
+// src/layouts/BaseLayout.astro
+
+// El "frontmatter" de Astro, donde se ejecuta código en el servidor.
+import '../styles/global.css';
+
+interface Props {
+	title: string;
+    bodyClass?: string; // Prop opcional para la clase del body
+}
+
+const { title, bodyClass = 'content-body' } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+</head>
+<body class={bodyClass}>
+    <header class="main-header">
+        <nav>
+            <ul>
+                <li><a href="/" class="nav-glitch" data-text="Home">Home</a></li>
+                <li><a href="/tech-stack" class="nav-glitch" data-text="Tech Stack">Tech Stack</a></li>
+                <li><a href="/projects" class="nav-glitch" data-text="Projects">Projects</a></li>
+                <li><a href="/about" class="nav-glitch" data-text="About Me">About Me</a></li>
+            </ul>
+        </nav>
+        <div class="header-actions">
+            <a href="https://www.linkedin.com/in/miquelcarnot/" target="_blank" aria-label="LinkedIn" rel="noopener" class="social-icon">
+                <img src="/icons/linkedin-white.svg" alt="LinkedIn" />
+            </a>
+            <a href="https://github.com/greyzeids" target="_blank" aria-label="GitHub" rel="noopener" class="social-icon">
+                <img src="/icons/github-white.svg" alt="GitHub" />
+            </a>
+            <a href="/about#contact" class="connect-button-header">Let's Connect</a>
+        </div>
+    </header>
+
+    <slot />
+</body>
+</html>
