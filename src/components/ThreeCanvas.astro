@@ -1,5 +1,5 @@
 ---
-import threeExperienceURL from '../scripts/three-experience.js?url';
+// src/components/ThreeCanvas.astro
 ---
 
 <canvas id="bg"></canvas>
@@ -12,4 +12,6 @@ import threeExperienceURL from '../scripts/three-experience.js?url';
     <div class="crosshair-bracket bottom-right"></div>
 </div>
 
-<script type="module" src={threeExperienceURL}></script>
+<script>
+    import "../scripts/three-experience.js";
+</script>
