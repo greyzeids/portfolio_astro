@@ -55,6 +55,8 @@ body.content-body {
     font-weight: 500;
     font-size: 1rem;
     transition: color 0.3s ease;
+    padding: 10px 15px;
+    pointer-events: none;
 }
 .main-header nav a:hover,
 .main-header nav a.active {
@@ -120,7 +122,7 @@ body.content-body {
 /* ----- EFECTO GLITCH (Copiado de tu versión original) ----- */
 
 /* 1. ESTILOS BASE DEL ENLACE */
-.main-header nav a.nav-glitch {
+.main-header nav span.nav-glitch {
     color: #f0f0f0;
     text-decoration: none;
     font-weight: 400;
@@ -130,11 +132,12 @@ body.content-body {
     padding: 10px 15px;
     position: relative;
     transition: color 0.2s linear;
+    pointer-events: auto;
 }
 
 /* 2. CONFIGURACIÓN DE CAPAS (::before y ::after) */
-.main-header nav a.nav-glitch::before,
-.main-header nav a.nav-glitch::after {
+.main-header nav span.nav-glitch::before,
+.main-header nav span.nav-glitch::after {
     content: attr(data-text);
     position: absolute;
     top: 0;
@@ -152,16 +155,16 @@ body.content-body {
 }
 
 /* 4. ESTADO DE INTERACCIÓN (Hover) */
-.main-header nav a.nav-glitch:hover {
+.main-header nav span.nav-glitch:hover {
     /* El texto base permanece visible para legibilidad */
 }
 
-.main-header nav a.nav-glitch:hover::before {
+.main-header nav span.nav-glitch:hover::before {
     text-shadow: 2px 2px #f000ff, -2px -2px #7000ff;
     animation: hover-glitch-1 5s infinite linear alternate;
 }
 
-.main-header nav a.nav-glitch:hover::after {
+.main-header nav span.nav-glitch:hover::after {
     text-shadow: -2px 2px #00e5ff, 2px -2px #0055ff;
     animation: hover-glitch-2 4.5s infinite linear alternate;
 }
@@ -322,4 +325,76 @@ body.content-body {
     bottom: 0;
     right: 0;
     border-width: 0 2px 2px 0; /* Borde inferior y derecho */
+}
+
+/* --- Estilos para la Splash Screen --- */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    /* Inspirado en tu imagen, un degradado naranja */
+    background: linear-gradient(45deg, #f8a55f, #f2c782);
+    z-index: 999;
+    transition: opacity 0.5s ease-out;
+}
+
+#splash-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* --- Estilos para la Transición de Glitch --- */
+#glitch-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000033; /* El color de fondo de tu juego */
+    opacity: 0;
+    pointer-events: none;
+    z-index: 998; /* Justo debajo del canvas del splash */
+}
+
+#glitch-overlay.active {
+    animation: full-glitch 1s forwards;
+}
+
+/* Keyframes para la animación de glitch a pantalla completa */
+@keyframes full-glitch {
+    0% {
+        opacity: 0;
+        transform: translate(0, 0);
+        clip-path: inset(10% 0 80% 0);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-10px, 5px);
+        clip-path: inset(70% 0 10% 0);
+    }
+    40% {
+        opacity: 1;
+        transform: translate(10px, -5px);
+        clip-path: inset(40% 0 30% 0);
+    }
+    60% {
+        opacity: 1;
+        transform: translate(-5px, 10px);
+        clip-path: inset(85% 0 5% 0);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(5px, -10px);
+        clip-path: inset(20% 0 70% 0);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(0, 0);
+        clip-path: inset(0 0 0 0); /* Revela todo al final */
+    }
 }

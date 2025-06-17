@@ -1,0 +1,133 @@
+/* --- Estilos para la Interfaz del Juego (Game HUD) --- */
+
+#game-hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    font-family: "Share Tech Mono", monospace;
+    color: #00f6ff;
+    z-index: 50;
+}
+
+/* ¡NUEVO! Contenedor principal para cada medidor (incluye título) */
+.gauge-container {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column; /* Coloca el título y el medidor en una columna */
+    align-items: center;
+    gap: 15px; /* Espacio entre el título y el medidor */
+}
+.gauge-container.left {
+    left: 35%;
+}
+.gauge-container.right {
+    right: 35%;
+}
+
+/* ¡NUEVO! Estilo para los títulos (SPEED / ALTITUDE) */
+.gauge-title {
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-shadow: 0 0 5px #fefc51;
+    color: #fefc51; /* Color amarillo para destacar */
+}
+
+/* Regla modificada: ahora se aplica al contenedor del medidor */
+.vertical-gauge {
+    height: 300px;
+    display: flex;
+    gap: 10px;
+}
+/* La dirección inversa ahora se aplica al contenedor anidado */
+.gauge-container.right .vertical-gauge {
+    flex-direction: row-reverse;
+}
+
+.gauge-track {
+    width: 10px;
+    height: 100%;
+    border: 2px solid rgba(0, 246, 255, 0.5);
+    position: relative;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 9px,
+        rgba(0, 246, 255, 0.3) 10px
+    );
+}
+
+.gauge-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    font-size: 0.9rem;
+}
+/* Modificado para apuntar a la estructura correcta */
+.gauge-container.right .gauge-labels {
+    align-items: flex-end;
+}
+
+.gauge-indicator {
+    position: absolute;
+    left: -15px;
+    width: 40px;
+    height: 20px;
+    border-top: 2px solid #fefc51;
+    border-bottom: 2px solid #fefc51;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+}
+.gauge-indicator::before {
+    content: "";
+    width: 100%;
+    height: 2px;
+    background: #fefc51;
+}
+/* Modificado para apuntar a la estructura correcta */
+.gauge-container.right .gauge-indicator {
+    left: auto;
+    right: -15px;
+}
+/* --- Estilos para la Brújula 3D / Navball --- */
+
+#compass-canvas {
+    /* Lo posicionamos de forma fija en la esquina inferior izquierda */
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+
+    /* Le damos un tamaño cuadrado */
+    width: 150px;
+    height: 150px;
+
+    /* Nos aseguramos de que esté por encima del juego */
+    z-index: 100;
+}
+
+/* El marco es un div vacío que ponemos por encima para decorar */
+#compass-frame {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    width: 150px;
+    height: 150px;
+
+    /* Creamos un marco circular con CSS */
+    border: 3px solid #00f6ff;
+    border-radius: 50%; /* Esto lo hace redondo */
+    box-shadow: 0 0 10px #00f6ff, 0 0 20px #00f6ff inset;
+
+    /* Para que no bloquee el ratón */
+    pointer-events: none;
+
+    /* Por encima del canvas de la brújula para que se vea el borde */
+    z-index: 101;
+}

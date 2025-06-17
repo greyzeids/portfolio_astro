@@ -1,8 +1,99 @@
 ---
-import BaseLayout from '../layouts/Layout.astro';
+// index.astro (la parte superior no cambia)
+import Layout from '../layouts/Layout.astro';
 import ThreeCanvas from '../components/ThreeCanvas.astro';
+import '../styles/splash_screen.css';
 ---
+<Layout title="Miquel Carnot - Portfolio" bodyClass="game-body">
 
-<BaseLayout title="Miquel Carnot Luna - 3D Experience" bodyClass="game-body">
-    <ThreeCanvas />
-</BaseLayout>
+    <div id="splash-screen">
+        <canvas id="splash-canvas"></canvas>
+
+        <div id="mecha-hud">
+
+            <div class="hud-top">
+                <div id="health-bar">
+                    <div class="bar-label">VITALITY</div>
+                    <div class="bar-container">
+                        <div id="health-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="target-reticle">
+                <div class="reticle-bracket top-left"></div>
+                <div class="reticle-bracket top-right"></div>
+                <div class="reticle-bracket bottom-left"></div>
+                <div class="reticle-bracket bottom-right"></div>
+                
+                <span id="glitch-text" data-text="[ INICIAR ]">[ INICIAR ]</span>
+            </div>
+
+            <div class="hud-bottom">
+                <div id="compass">
+                    <div id="compass-tape">
+                        <span>|</span><span>N</span><span>|</span><span>...</span><span>|</span><span>NE</span><span>|</span><span>...</span><span>|</span><span>E</span><span>|</span><span>...</span><span>|</span><span>SE</span><span>|</span><span>...</span><span>|</span><span>S</span><span>|</span><span>...</span><span>|</span><span>SW</span><span>|</span><span>...</span><span>|</span><span>W</span><span>|</span><span>...</span><span>|</span><span>NW</span><span>|</span><span>...</span><span>|</span>
+                    </div>
+                </div>
+                <div class="compass-marker"></div>
+            </div>
+
+        </div>
+
+        <div id="glitch-overlay">
+            <div class="glitch-layer"></div>
+            <div class="glitch-layer"></div>
+            <div class="glitch-layer"></div>
+        </div>
+    </div>
+
+    <div id="main-experience" style="visibility: hidden;">
+        <ThreeCanvas />
+    </div>
+</Layout>
+
+<script>
+    // La importación de splash-experience.js se puede quitar si lo has vaciado
+    // import '../scripts/splash-experience.js';
+
+    // --- ELEMENTOS DEL DOM ---
+    const splashScreen = document.getElementById('splash-screen');
+    const mainExperience = document.getElementById('main-experience');
+    const glitchOverlay = document.getElementById('glitch-overlay');
+    const glitchText = document.getElementById('glitch-text');
+    
+    // ¡NUEVO! Obtenemos la retícula para animarla
+    const targetReticle = document.getElementById('target-reticle');
+
+    if (splashScreen && mainExperience && glitchOverlay && glitchText && targetReticle) {
+        
+        // --- ANIMACIÓN DE LA RETÍCULA AL PASAR EL RATÓN ---
+        glitchText.addEventListener('mouseover', () => {
+             // Añadimos la clase que activa la animación CSS
+             targetReticle.classList.add('locked-on');
+        });
+
+        glitchText.addEventListener('mouseout', () => {
+            // Quitamos la clase cuando el ratón sale
+            targetReticle.classList.remove('locked-on');
+        });
+        
+        // --- LÓGICA DE TRANSICIÓN AL HACER CLIC ---
+        glitchText.addEventListener('click', () => {
+            // El resto de la lógica del glitch se queda igual
+            glitchOverlay.classList.add('active');
+
+            setTimeout(() => {
+                splashScreen.style.opacity = '0';
+                mainExperience.style.visibility = 'visible';
+            }, 1000);
+
+            splashScreen.addEventListener('transitionend', () => {
+                splashScreen.remove();
+            }, { once: true });
+        });
+
+    } else {
+        console.error("Error: No se encontraron los elementos necesarios para el Mecha HUD.");
+    }
+</script>

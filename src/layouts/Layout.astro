@@ -1,7 +1,4 @@
 ---
-// src/layouts/BaseLayout.astro
-
-// El "frontmatter" de Astro, donde se ejecuta código en el servidor.
 import '../styles/global.css';
 
 interface Props {
@@ -22,10 +19,10 @@ const { title, bodyClass = 'content-body' } = Astro.props;
     <header class="main-header">
         <nav>
             <ul>
-                <li><a href="/" class="nav-glitch" data-text="Home">Home</a></li>
-                <li><a href="/tech-stack" class="nav-glitch" data-text="Tech Stack">Tech Stack</a></li>
-                <li><a href="/projects" class="nav-glitch" data-text="Projects">Projects</a></li>
-                <li><a href="/about" class="nav-glitch" data-text="About Me">About Me</a></li>
+                <li><a href="/"><span class="nav-glitch" data-text="Home">Home</span></a></li>
+                <li><a href="/tech-stack"><span class="nav-glitch" data-text="Tech Stack">Tech Stack</span></a></li>
+                <li><a href="/projects"><span class="nav-glitch" data-text="Projects">Projects</span></a></li>
+                <li><a href="/about"><span class="nav-glitch" data-text="About Me">About Me</span></a></li>
             </ul>
         </nav>
         <div class="header-actions">

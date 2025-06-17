@@ -1,15 +1,52 @@
+<!-- src/components/ThreeCanvas.astro -->
 ---
-// src/components/ThreeCanvas.astro
+import '../styles/game_hud.css';
 ---
 
+<!-- Tu canvas y crosshair existentes -->
 <canvas id="bg"></canvas>
-
 <div id="crosshair-container">
     <div class="crosshair-dot"></div>
     <div class="crosshair-bracket top-left"></div>
     <div class="crosshair-bracket top-right"></div>
     <div class="crosshair-bracket bottom-left"></div>
     <div class="crosshair-bracket bottom-right"></div>
+</div>
+
+<!-- Contenedor para la interfaz del juego (Estructura Actualizada) -->
+<div id="game-hud">
+
+    <!-- Medidor Izquierdo (Velocidad) -->
+    <div class="gauge-container left">
+        <div class="vertical-gauge">
+            <div class="gauge-track">
+                <div id="speed-indicator" class="gauge-indicator"></div>
+            </div>
+            <div class="gauge-labels">
+                <span>250</span><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span>
+            </div>
+        </div>
+        <!-- Etiqueta de texto para la velocidad -->
+        <div class="gauge-title">SPEED</div>
+    </div>
+
+    <!-- Medidor Derecho (Altitud) -->
+    <div class="gauge-container right">
+        <!-- Etiqueta de texto para la altitud -->
+        <div class="gauge-title">ALTITUDE</div>
+        <div class="vertical-gauge">
+             <div class="gauge-track">
+                <div id="altitude-indicator" class="gauge-indicator"></div>
+            </div>
+            <div class="gauge-labels">
+                <span>100</span><span>50</span><span>0</span><span>-50</span><span>-100</span>
+            </div>
+        </div>
+    </div>
+    <!-- Canvas donde dibujaremos la brújula 3D -->
+    <canvas id="compass-canvas"></canvas>
+    <!-- Un marco estético para decorar la brújula -->
+    <div id="compass-frame"></div>
 </div>
 
 <script>

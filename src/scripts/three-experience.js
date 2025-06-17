@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import Navball from "./navball.js";
 
 // --- Configuración Esencial de Three.js ---
 const scene = new THREE.Scene();
@@ -98,9 +99,18 @@ let originalLinearDamping;
 
 // --- Elementos del DOM cacheados ---
 const crosshair = document.getElementById("crosshair-container");
+const speedIndicator = document.getElementById("speed-indicator");
+const altitudeIndicator = document.getElementById("altitude-indicator");
 
 const laserSound = new Audio("/sounds/plasma_gun.mp3");
 laserSound.volume = 0.2;
+
+// --- Función de ayuda para mapear rangos ---
+function mapRange(value, in_min, in_max, out_min, out_max) {
+    return (
+        ((value - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min
+    );
+}
 
 function loadPlayerModel() {
     return new Promise((resolve, reject) => {
@@ -119,9 +129,12 @@ function loadPlayerModel() {
     });
 }
 
+const navball = new Navball();
+
 async function initializeScene() {
     console.log("Inicializando escena...");
     createStarfield();
+    navball.init();
 
     try {
         const modelScene = await loadPlayerModel();
@@ -134,9 +147,6 @@ async function initializeScene() {
         player.visual.scale.set(0.5, 0.5, 0.5);
         player.visual.rotation.y = Math.PI;
         scene.add(player.visual);
-
-        // const axesHelper = new THREE.AxesHelper(5);
-        // player.visual.add(axesHelper);
 
         const playerShape = new CANNON.Sphere(0.8);
         const initialCannonQuaternion = new CANNON.Quaternion();
@@ -189,8 +199,6 @@ function createStarfield() {
     console.log("Campo de estrellas creado.");
 }
 
-// AÑADE ESTA NUEVA FUNCIÓN A TU CÓDIGO
-
 function createEnergyBlastTexture() {
     const canvas = document.createElement("canvas");
     canvas.width = 64;
@@ -205,8 +213,6 @@ function createEnergyBlastTexture() {
         canvas.width / 2
     );
 
-    // --- AQUÍ ESTÁ LA MAGIA DEL COLOR ---
-    // El degradado va desde el centro (0.0) hacia afuera (1.0)
     gradient.addColorStop(0.0, "rgba(255, 255, 255, 1)");
     gradient.addColorStop(0.2, "rgba(191, 255, 0, 1)");
     gradient.addColorStop(0.4, "rgba(64, 224, 208, 1)");
@@ -219,14 +225,10 @@ function createEnergyBlastTexture() {
 }
 
 function fireProjectile() {
-    console.log("¡Fuego!");
-
     const soundClone = laserSound.cloneNode();
     soundClone.volume = laserSound.volume;
     soundClone.play();
-    // ---------------------------------------------
 
-    // --- 1. Apariencia del Proyectil (Three.js) - Usando el Sprite ---
     const projectileTexture = createEnergyBlastTexture();
     const projectileMaterial = new THREE.SpriteMaterial({
         map: projectileTexture,
@@ -237,7 +239,6 @@ function fireProjectile() {
     const projectileVisual = new THREE.Sprite(projectileMaterial);
     projectileVisual.scale.set(1, 1, 1);
 
-    // --- 2. Cuerpo Físico del Proyectil (Cannon-es) ---
     const projectileShape = new CANNON.Sphere(0.2);
     const projectileBody = new CANNON.Body({
         mass: 0.1,
@@ -245,7 +246,6 @@ function fireProjectile() {
         linearDamping: 0,
     });
 
-    // --- El resto de la función es igual ---
     projectileBody.quaternion.copy(player.body.quaternion);
 
     const startPosition = player.body.position.clone();
@@ -318,38 +318,51 @@ function animate() {
         }
 
         // --- MOVIMIENTO DE ROTACIÓN (Flechas + Q/E) - CON LÍMITE DE PITCH ---
-
-        // 1. Obtenemos el vector "hacia adelante" de la nave
         const forwardVector = player.body.quaternion.vmult(
             new CANNON.Vec3(0, 0, 1)
         );
-        // 2. Definimos el vector "arriba" del mundo
         const worldUp = new CANNON.Vec3(0, 1, 0);
-        // 3. Calculamos cómo de vertical es la orientación
         const dot = forwardVector.dot(worldUp);
-
         const localAngularVelocity = new CANNON.Vec3(0, 0, 0);
-
-        // Pitch (con límite para evitar el salto de la cámara)
         if (keysPressed["ArrowUp"]) {
             if (dot < 0.98) localAngularVelocity.x = -ROTATION_SPEED;
         } else if (keysPressed["ArrowDown"]) {
             if (dot > -0.98) localAngularVelocity.x = ROTATION_SPEED;
         }
-
-        // Yaw (Giro)
         if (keysPressed["ArrowLeft"]) localAngularVelocity.y = ROTATION_SPEED;
         else if (keysPressed["ArrowRight"])
             localAngularVelocity.y = -ROTATION_SPEED;
-
-        // Roll (Rotación)
         if (keysPressed["KeyQ"]) localAngularVelocity.z = -ROLL_SPEED;
         else if (keysPressed["KeyE"]) localAngularVelocity.z = ROLL_SPEED;
 
-        // Aplicamos la velocidad angular calculada
         const worldAngularVelocity =
             player.body.quaternion.vmult(localAngularVelocity);
         player.body.angularVelocity.copy(worldAngularVelocity);
+
+        // --- ACTUALIZACIÓN DE LA INTERFAZ (HUD) ---
+        if (speedIndicator && altitudeIndicator) {
+            const currentSpeed = player.body.velocity.length();
+            const maxSpeed = MOVE_SPEED * 1.5;
+            const speedPosition = mapRange(currentSpeed, 0, maxSpeed, 280, 0);
+            speedIndicator.style.top = `${Math.max(
+                0,
+                Math.min(280, speedPosition)
+            )}px`;
+
+            const currentAltitude = player.body.position.y;
+            const maxAltitude = 100;
+            const altitudePosition = mapRange(
+                currentAltitude,
+                -maxAltitude,
+                maxAltitude,
+                280,
+                0
+            );
+            altitudeIndicator.style.top = `${Math.max(
+                0,
+                Math.min(280, altitudePosition)
+            )}px`;
+        }
     }
 
     // Sincronización entre física y visual
@@ -364,6 +377,7 @@ function animate() {
             targetQuaternion,
             PHYSICS_INTERPOLATION_FACTOR
         );
+        navball.update(player.visual.quaternion);
     }
 
     // Animación cosmética del gimbal
@@ -376,7 +390,6 @@ function animate() {
         }
 
         let targetBank = 0;
-        // CORREGIDO: La animación de banqueo responde a las teclas de rotación (flechas)
         if (keysPressed["ArrowLeft"]) {
             targetBank = BANK_AMOUNT;
         } else if (keysPressed["ArrowRight"]) {
@@ -397,7 +410,6 @@ function animate() {
 
     // Lógica de la cámara
     if (player.visual) {
-        // CORREGIDO: El offset en Y y el signo del zoom estaban mal en tu código
         const cameraOffset = new THREE.Vector3(0, 0, -cameraZoomLevel);
         cameraOffset.applyQuaternion(player.visual.quaternion);
         const targetCameraPosition = player.visual.position
@@ -411,6 +423,7 @@ function animate() {
         camera.lookAt(cameraLookAtTarget);
     }
 
+    // Lógica del Crosshair
     if (player.visual && crosshair) {
         const reticleTargetPosition = new THREE.Vector3(
             0,
@@ -426,12 +439,14 @@ function animate() {
         crosshair.style.top = `${y}px`;
     }
 
+    // Lógica de Proyectiles
     for (const projectile of projectiles) {
         projectile.visual.position.copy(projectile.body.position);
         projectile.visual.quaternion.copy(projectile.body.quaternion);
     }
 
     renderer.render(scene, camera);
+    navball.render();
 }
 
 initializeScene();

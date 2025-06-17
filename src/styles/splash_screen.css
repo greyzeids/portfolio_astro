@@ -1,0 +1,293 @@
+/* ================================================ */
+/* SPLASH_SCREEN.CSS - VERSIÓN FINAL       */
+/* ================================================ */
+
+/* --- FUENTE E IMPORTS --- */
+@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
+
+/* --- ESTILO BASE DE LA PANTALLA --- */
+#splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: linear-gradient(45deg, #32005e, #00ffc3);
+    z-index: 999;
+    transition: opacity 0.5s ease-out;
+}
+
+#splash-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* --- CONTENEDOR PRINCIPAL DEL HUD --- */
+#mecha-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    font-family: "Share Tech Mono", monospace;
+    color: #00f6ff; /* Cian como color principal */
+    text-shadow: 0 0 3px #00f6ff, 0 0 8px #00f6ff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px;
+    box-sizing: border-box;
+    z-index: 100;
+}
+
+/* --- SECCIÓN SUPERIOR: BARRA DE VIDA --- */
+.hud-top {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+#health-bar {
+    width: 300px;
+}
+.bar-label {
+    text-align: left;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+.bar-container {
+    border: 2px solid #00f6ff;
+    padding: 3px;
+    background: rgba(0, 30, 40, 0.5);
+    box-shadow: 0 0 15px rgba(0, 246, 255, 0.3) inset;
+}
+#health-fill {
+    width: 95%; /* Nivel de vida */
+    height: 10px;
+    background: #00f6ff;
+    box-shadow: 0 0 10px #00f6ff;
+}
+
+/* --- SECCIÓN CENTRAL: RETÍCULA DE OBJETIVO --- */
+#target-reticle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 250px;
+    height: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#glitch-text {
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: letter-spacing 0.3s ease;
+}
+#target-reticle.locked-on #glitch-text {
+    letter-spacing: 5px;
+    color: #fefc51; /* El texto se vuelve amarillo al fijar */
+    text-shadow: 0 0 5px #fefc51, 0 0 10px #fefc51;
+}
+
+.reticle-bracket {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border: 2px solid #fefc51; /* Amarillo para la retícula */
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.reticle-bracket.top-left {
+    top: 0;
+    left: 0;
+    border-right: none;
+    border-bottom: none;
+}
+.reticle-bracket.top-right {
+    top: 0;
+    right: 0;
+    border-left: none;
+    border-bottom: none;
+}
+.reticle-bracket.bottom-left {
+    bottom: 0;
+    left: 0;
+    border-top: none;
+    border-right: none;
+}
+.reticle-bracket.bottom-right {
+    bottom: 0;
+    right: 0;
+    border-top: none;
+    border-left: none;
+}
+
+/* Animación de la retícula al añadir la clase .locked-on */
+#target-reticle.locked-on .reticle-bracket.top-left {
+    transform: translate(30px, 30px);
+}
+#target-reticle.locked-on .reticle-bracket.top-right {
+    transform: translate(-30px, 30px);
+}
+#target-reticle.locked-on .reticle-bracket.bottom-left {
+    transform: translate(30px, -30px);
+}
+#target-reticle.locked-on .reticle-bracket.bottom-right {
+    transform: translate(-30px, -30px);
+}
+
+/* --- SECCIÓN INFERIOR: BRÚJULA --- */
+.hud-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#compass {
+    width: 400px;
+    overflow: hidden;
+    background: rgba(0, 30, 40, 0.5);
+    border-top: 2px solid #00f6ff;
+    border-bottom: 2px solid #00f6ff;
+    padding: 2px 0;
+}
+#compass-tape {
+    display: flex;
+    justify-content: space-around;
+    width: 800px; /* Doble de ancho para que se pueda mover */
+    font-size: 1.2rem;
+    animation: compass-move 20s linear infinite;
+}
+#compass-tape span {
+    padding: 0 10px;
+}
+.compass-marker {
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid #fefc51; /* Marcador amarillo */
+    margin-top: -2px;
+}
+@keyframes compass-move {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-400px);
+    }
+}
+
+/* --- SECCIÓN DE TRANSICIÓN: GLITCH OVERLAY --- */
+#glitch-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none; /* Importante para que no bloquee los clics */
+    background-color: #000033;
+    z-index: 998; /* Justo debajo del HUD */
+}
+#glitch-overlay.active {
+    opacity: 1;
+}
+.glitch-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+#glitch-overlay.active .glitch-layer {
+    opacity: 1;
+}
+
+/* Capa 1: Amarillo Neón Cyberpunk */
+.glitch-layer:nth-child(1) {
+    background: #fefc51;
+    mix-blend-mode: difference;
+    animation: cyber-glitch-1 1.2s steps(4, end) forwards;
+}
+/* Capa 2: Cian Eléctrico */
+.glitch-layer:nth-child(2) {
+    background: #00f6ff;
+    mix-blend-mode: difference;
+    animation: cyber-glitch-2 1s steps(2, end) forwards 0.1s;
+}
+/* Capa 3: Scanlines y Ruido */
+.glitch-layer:nth-child(3) {
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.8) 0px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.8) 4px
+    );
+    animation: cyber-glitch-3 1.5s linear forwards;
+}
+
+/* --- KEYFRAMES PARA EL GLITCH --- */
+@keyframes cyber-glitch-1 {
+    0% {
+        transform: translateX(0);
+        clip-path: polygon(0 0, 100% 0, 100% 5%, 0 5%);
+    }
+    20% {
+        transform: translateX(-5%);
+        clip-path: polygon(0 40%, 100% 40%, 100% 45%, 0 45%);
+    }
+    40% {
+        transform: translateX(5%);
+        clip-path: polygon(0 80%, 100% 80%, 100% 82%, 0 82%);
+    }
+    60% {
+        transform: translateX(-2%);
+        clip-path: polygon(0 20%, 100% 20%, 100% 21%, 0 21%);
+    }
+    80% {
+        transform: translateX(2%);
+        clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0 65%);
+    }
+    100% {
+        transform: translateX(0);
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    }
+}
+@keyframes cyber-glitch-2 {
+    0% {
+        transform: translateY(3%);
+        clip-path: inset(50% 0 50% 0);
+    }
+    33% {
+        transform: translateY(-3%);
+        clip-path: inset(10% 0 88% 0);
+    }
+    66% {
+        transform: translateY(5%);
+        clip-path: inset(90% 0 8% 0);
+    }
+    100% {
+        transform: translateY(0);
+        clip-path: inset(0 0 0 0);
+    }
+}
+@keyframes cyber-glitch-3 {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(20px);
+        opacity: 0.5;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
