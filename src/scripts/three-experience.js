@@ -16,7 +16,6 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.z = 10;
 
-// ... (El resto de listeners de teclado y rueda del ratón no cambian) ...
 const keysPressed = {};
 window.addEventListener("keydown", (event) => {
     keysPressed[event.code] = true;
@@ -55,7 +54,6 @@ const bloomPass = new UnrealBloomPass(
 );
 composer.addPass(bloomPass);
 
-// ... (La configuración de CANNON y las luces no cambia) ...
 const world = new CANNON.World();
 world.gravity.set(0, 0, 0);
 const defaultMaterial = new CANNON.Material("default");
@@ -74,12 +72,10 @@ scene.add(directionalLight);
 const loader = new GLTFLoader();
 const clock = new THREE.Clock();
 
-// --- ¡NUEVO! Array para guardar nuestras capas de estrellas ---
 let starLayers = [];
-
+let poleVortexes = [];
 let player = { visual: null, body: null, gimbal: null };
 
-// ... (El resto de constantes, variables y elementos del DOM no cambian) ...
 const MOVE_SPEED = 50,
     BOOST_MULTIPLIER = 3,
     ROTATION_SPEED = 2.5,
@@ -87,7 +83,8 @@ const MOVE_SPEED = 50,
     CAMERA_SMOOTH_SPEED = 0.04,
     CAMERA_LOOK_AT_SMOOTH_SPEED = 0.07,
     PHYSICS_INTERPOLATION_FACTOR = 0.3,
-    TILT_AMOUNT = 0.25,
+    TILT_FORWARD_AMOUNT = 1.5,
+    TILT_BACKWARD_AMOUNT = 0.25,
     BANK_AMOUNT = 0.5,
     VISUAL_SMOOTHING = 0.05,
     RETICLE_DISTANCE = 150;
@@ -134,12 +131,11 @@ async function initializeScene() {
     console.log("Inicializando escena...");
 
     createGalacticBackground();
-    // --- ¡NUEVO! Llamamos a la función que crea las capas de estrellas ---
     createStarLayers();
+    createPoleVortexes();
 
     navball.init();
 
-    // ... (El resto de la función para cargar el modelo no cambia) ...
     try {
         const modelScene = await loadPlayerModel();
         player.visual = new THREE.Group();
@@ -199,9 +195,6 @@ function createGalacticBackground() {
     );
 }
 
-// ========================================================================
-// ¡NUEVA FUNCIÓN MEJORADA! - Crea capas de estrellas para efecto parallax
-// ========================================================================
 function createStarLayers() {
     const layerConfigs = [
         { count: 1500, size: 0.25, distance: 300 }, // Capa lejana
@@ -241,7 +234,44 @@ function createStarLayers() {
     );
 }
 
-// ... (Las funciones createEnergyBlastTexture y fireProjectile no cambian) ...
+function createPoleVortexes() {
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(
+        "/textures/vortex.png", // <-- El nombre de tu nueva textura
+        (texture) => {
+            // Un plano cuadrado para poner la textura
+            const vortexGeometry = new THREE.PlaneGeometry(450, 450);
+
+            // Un material básico que no reacciona a la luz y es aditivo
+            const vortexMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                blending: THREE.NormalBlending,
+                transparent: true,
+                depthWrite: false, // Importante para que no oculte otros objetos transparentes
+            });
+
+            // --- Vórtice del Polo Norte ---
+            const northVortex = new THREE.Mesh(vortexGeometry, vortexMaterial);
+            // Lo posicionamos muy arriba en el cielo
+            northVortex.position.set(0, 700, 0);
+            // Lo rotamos para que quede "plano" en el "techo" del mundo
+            northVortex.rotation.x = Math.PI / 2;
+            scene.add(northVortex);
+            poleVortexes.push(northVortex);
+
+            // --- Vórtice del Polo Sur ---
+            const southVortex = new THREE.Mesh(vortexGeometry, vortexMaterial);
+            // Lo posicionamos muy abajo
+            southVortex.position.set(0, -700, 0);
+            // Lo rotamos para que quede "plano" en el "suelo" del mundo
+            southVortex.rotation.x = -Math.PI / 2;
+            scene.add(southVortex);
+            poleVortexes.push(southVortex);
+
+            console.log("Vórtices polares creados.");
+        }
+    );
+}
 function createEnergyBlastTexture() {
     const canvas = document.createElement("canvas");
     canvas.width = 64;
@@ -317,7 +347,10 @@ function animate() {
         layer.rotation.x -= rotationSpeed * 0.05;
     });
 
-    // ... (El resto del bucle de animación para el jugador, HUD, cámara, etc., no cambia) ...
+    poleVortexes.forEach((vortex) => {
+        vortex.rotation.z += 0.005;
+    });
+
     if (player.body) {
         const currentMoveSpeed = keysPressed["ShiftLeft"]
             ? MOVE_SPEED * BOOST_MULTIPLIER
@@ -362,9 +395,9 @@ function animate() {
         const dot = forwardVector.dot(worldUp);
         const localAngularVelocity = new CANNON.Vec3(0, 0, 0);
         if (keysPressed["ArrowUp"]) {
-            if (dot < 0.7) localAngularVelocity.x = -ROTATION_SPEED;
+            if (dot < 0.9) localAngularVelocity.x = -ROTATION_SPEED;
         } else if (keysPressed["ArrowDown"]) {
-            if (dot > -0.7) localAngularVelocity.x = ROTATION_SPEED;
+            if (dot > -0.9) localAngularVelocity.x = ROTATION_SPEED;
         }
         if (keysPressed["ArrowLeft"]) localAngularVelocity.y = ROTATION_SPEED;
         else if (keysPressed["ArrowRight"])
@@ -413,9 +446,9 @@ function animate() {
     if (player.gimbal) {
         let targetTilt = 0;
         if (keysPressed["KeyW"]) {
-            targetTilt = TILT_AMOUNT;
+            targetTilt = TILT_FORWARD_AMOUNT;
         } else if (keysPressed["KeyX"] || keysPressed["KeyS"]) {
-            targetTilt = -TILT_AMOUNT;
+            targetTilt = -TILT_BACKWARD_AMOUNT;
         }
         let targetBank = 0;
         if (keysPressed["ArrowLeft"]) {
@@ -473,12 +506,10 @@ function animate() {
 initializeScene();
 
 window.addEventListener("resize", () => {
-    // ... las líneas para la cámara y el renderer no cambian ...
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
-    // ¡NUEVO! Actualiza el tamaño del composer
     composer.setSize(window.innerWidth, window.innerHeight);
 });

@@ -1,0 +1,16 @@
+---
+const audioSrc = "/sounds/background.mp3";
+---
+
+<audio id="background-music" loop style="display: none;">
+    <source src={audioSrc} type="audio/mpeg">
+    Tu navegador no soporta el elemento de audio.
+</audio>
+
+<script>
+    const backgroundMusic = document.getElementById('background-music') as HTMLAudioElement;
+
+    if (backgroundMusic) {
+        backgroundMusic.volume = 0.7;
+    }
+</script>
