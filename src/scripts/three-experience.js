@@ -2,17 +2,21 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import Navball from "./navball.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 
-// --- Configuración Esencial de Three.js ---
+// --- Configuración Esencial ---
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
-    60,
+    75,
     window.innerWidth / window.innerHeight,
     0.1,
-    1000
+    2000
 );
 camera.position.z = 10;
 
+// ... (El resto de listeners de teclado y rueda del ratón no cambian) ...
 const keysPressed = {};
 window.addEventListener("keydown", (event) => {
     keysPressed[event.code] = true;
@@ -20,8 +24,6 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("keyup", (event) => {
     keysPressed[event.code] = false;
 });
-
-// --- EVENT LISTENER PARA EL ZOOM CON LA RUEDA DEL RATÓN ---
 window.addEventListener("wheel", (event) => {
     cameraZoomLevel += event.deltaY * ZOOM_SENSITIVITY;
     cameraZoomLevel = THREE.MathUtils.clamp(
@@ -38,24 +40,32 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.setClearColor(0x000033);
 
-// --- Configuración del Mundo Físico (Cannon-es) ---
+// renderer.toneMapping = THREE.NoToneMapping;
+
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, camera);
+composer.addPass(renderPass);
+
+const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.6, // strength: La fuerza del resplandor
+    0.5, // radius: El radio del resplandor
+    0.8 // threshold: Qué tan brillante debe ser un píxel para empezar a brillar
+);
+composer.addPass(bloomPass);
+
+// ... (La configuración de CANNON y las luces no cambia) ...
 const world = new CANNON.World();
 world.gravity.set(0, 0, 0);
 const defaultMaterial = new CANNON.Material("default");
 const defaultContactMaterial = new CANNON.ContactMaterial(
     defaultMaterial,
     defaultMaterial,
-    {
-        friction: 0.2,
-        restitution: 0.1,
-    }
+    { friction: 0.2, restitution: 0.1 }
 );
 world.addContactMaterial(defaultContactMaterial);
-
-// --- Iluminación ---
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+const ambientLight = new THREE.AmbientLight(0x203040, 0.25);
 scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8);
 directionalLight.position.set(5, 10, 7.5);
@@ -64,54 +74,44 @@ scene.add(directionalLight);
 const loader = new GLTFLoader();
 const clock = new THREE.Clock();
 
-let player = {
-    visual: null,
-    body: null,
-    gimbal: null,
-};
+// --- ¡NUEVO! Array para guardar nuestras capas de estrellas ---
+let starLayers = [];
 
-// --- CONSTANTES Y VARIABLES ---
-const MOVE_SPEED = 50;
-const BOOST_MULTIPLIER = 3;
-const ROTATION_SPEED = 2.5;
-const ROLL_SPEED = 2;
-const CAMERA_SMOOTH_SPEED = 0.04;
-const CAMERA_LOOK_AT_SMOOTH_SPEED = 0.07;
-const PHYSICS_INTERPOLATION_FACTOR = 0.3;
-const TILT_AMOUNT = 0.25;
-const BANK_AMOUNT = 0.5;
-const VISUAL_SMOOTHING = 0.05;
-const RETICLE_DISTANCE = 150;
-const projectiles = [];
-const FIRE_RATE = 200;
+let player = { visual: null, body: null, gimbal: null };
+
+// ... (El resto de constantes, variables y elementos del DOM no cambian) ...
+const MOVE_SPEED = 50,
+    BOOST_MULTIPLIER = 3,
+    ROTATION_SPEED = 2.5,
+    ROLL_SPEED = 2,
+    CAMERA_SMOOTH_SPEED = 0.04,
+    CAMERA_LOOK_AT_SMOOTH_SPEED = 0.07,
+    PHYSICS_INTERPOLATION_FACTOR = 0.3,
+    TILT_AMOUNT = 0.25,
+    BANK_AMOUNT = 0.5,
+    VISUAL_SMOOTHING = 0.05,
+    RETICLE_DISTANCE = 150;
+const projectiles = [],
+    FIRE_RATE = 200;
 let lastFireTime = 0;
-
-// --- Variables para el Zoom ---
-let cameraZoomLevel = 2;
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 25;
-const ZOOM_SENSITIVITY = 0.005;
-
-let cameraLookAtTarget = new THREE.Vector3();
-const targetPosition = new THREE.Vector3();
-const targetQuaternion = new THREE.Quaternion();
-let originalLinearDamping;
-
-// --- Elementos del DOM cacheados ---
-const crosshair = document.getElementById("crosshair-container");
-const speedIndicator = document.getElementById("speed-indicator");
-const altitudeIndicator = document.getElementById("altitude-indicator");
-
+let cameraZoomLevel = 2,
+    MIN_ZOOM = 1,
+    MAX_ZOOM = 25,
+    ZOOM_SENSITIVITY = 0.005;
+let cameraLookAtTarget = new THREE.Vector3(),
+    targetPosition = new THREE.Vector3(),
+    targetQuaternion = new THREE.Quaternion(),
+    originalLinearDamping;
+const crosshair = document.getElementById("crosshair-container"),
+    speedIndicator = document.getElementById("speed-indicator"),
+    altitudeIndicator = document.getElementById("altitude-indicator");
 const laserSound = new Audio("/sounds/plasma_gun.mp3");
 laserSound.volume = 0.2;
-
-// --- Función de ayuda para mapear rangos ---
 function mapRange(value, in_min, in_max, out_min, out_max) {
     return (
         ((value - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min
     );
 }
-
 function loadPlayerModel() {
     return new Promise((resolve, reject) => {
         loader.load(
@@ -128,26 +128,27 @@ function loadPlayerModel() {
         );
     });
 }
-
 const navball = new Navball();
 
 async function initializeScene() {
     console.log("Inicializando escena...");
-    createStarfield();
+
+    createGalacticBackground();
+    // --- ¡NUEVO! Llamamos a la función que crea las capas de estrellas ---
+    createStarLayers();
+
     navball.init();
 
+    // ... (El resto de la función para cargar el modelo no cambia) ...
     try {
         const modelScene = await loadPlayerModel();
-
         player.visual = new THREE.Group();
         player.gimbal = new THREE.Group();
         player.visual.add(player.gimbal);
         player.gimbal.add(modelScene);
-
         player.visual.scale.set(0.5, 0.5, 0.5);
         player.visual.rotation.y = Math.PI;
         scene.add(player.visual);
-
         const playerShape = new CANNON.Sphere(0.8);
         const initialCannonQuaternion = new CANNON.Quaternion();
         initialCannonQuaternion.setFromEuler(
@@ -155,7 +156,6 @@ async function initializeScene() {
             player.visual.rotation.y,
             player.visual.rotation.z
         );
-
         player.body = new CANNON.Body({
             mass: 5,
             shape: playerShape,
@@ -164,11 +164,9 @@ async function initializeScene() {
             linearDamping: 0.3,
             angularDamping: 0.8,
         });
-
         world.addBody(player.body);
         cameraLookAtTarget.copy(player.visual.position);
         originalLinearDamping = player.body.linearDamping;
-
         console.log("Jugador creado en la escena y en el mundo físico.");
         animate();
     } catch (error) {
@@ -176,29 +174,74 @@ async function initializeScene() {
     }
 }
 
-function createStarfield() {
-    const starVertices = [];
-    for (let i = 0; i < 10000; i++) {
-        const x = THREE.MathUtils.randFloatSpread(2000);
-        const y = THREE.MathUtils.randFloatSpread(2000);
-        const z = THREE.MathUtils.randFloatSpread(2000);
-        starVertices.push(x, y, z);
-    }
-    const starGeometry = new THREE.BufferGeometry();
-    starGeometry.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(starVertices, 3)
+function createGalacticBackground() {
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(
+        "/textures/galaxy_background.jpg", // Tu imagen de alta calidad
+        (texture) => {
+            const skySphereGeo = new THREE.SphereGeometry(1000, 60, 40);
+
+            // Usamos un material estándar para tener más control
+            const skySphereMat = new THREE.MeshStandardMaterial({
+                map: texture,
+                side: THREE.BackSide,
+                emissive: 0xffffff, // Hacemos que la textura brille
+                emissiveIntensity: 0.1, // Controlamos cuánto brilla
+                emissiveMap: texture, // Hacemos que solo las partes con textura brillen
+                roughness: 1, // Sin reflejos especulares
+                metalness: 0, // No metálico
+            });
+
+            const skySphere = new THREE.Mesh(skySphereGeo, skySphereMat);
+            scene.add(skySphere);
+            console.log("Skysphere con material emisivo creada.");
+        }
     );
-    const starMaterial = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 1.5,
-        sizeAttenuation: false,
-    });
-    const stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
-    console.log("Campo de estrellas creado.");
 }
 
+// ========================================================================
+// ¡NUEVA FUNCIÓN MEJORADA! - Crea capas de estrellas para efecto parallax
+// ========================================================================
+function createStarLayers() {
+    const layerConfigs = [
+        { count: 1500, size: 0.25, distance: 300 }, // Capa lejana
+        { count: 1000, size: 0.4, distance: 200 }, // Capa media
+        { count: 500, size: 0.6, distance: 100 }, // Capa cercana
+    ];
+
+    layerConfigs.forEach((config) => {
+        const starVertices = [];
+        for (let i = 0; i < config.count; i++) {
+            const x = THREE.MathUtils.randFloatSpread(config.distance * 2);
+            const y = THREE.MathUtils.randFloatSpread(config.distance * 2);
+            const z = THREE.MathUtils.randFloatSpread(config.distance * 2);
+            starVertices.push(x, y, z);
+        }
+
+        const starGeometry = new THREE.BufferGeometry();
+        starGeometry.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(starVertices, 3)
+        );
+
+        const starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: config.size,
+            sizeAttenuation: true, // El tamaño de la partícula cambia con la distancia
+            transparent: true,
+            blending: THREE.AdditiveBlending, // Efecto de brillo bonito al superponerse
+        });
+
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+        starLayers.push(stars); // Guardamos la capa para animarla
+    });
+    console.log(
+        `${layerConfigs.length} capas de estrellas creadas para efecto parallax.`
+    );
+}
+
+// ... (Las funciones createEnergyBlastTexture y fireProjectile no cambian) ...
 function createEnergyBlastTexture() {
     const canvas = document.createElement("canvas");
     canvas.width = 64;
@@ -212,23 +255,18 @@ function createEnergyBlastTexture() {
         canvas.height / 2,
         canvas.width / 2
     );
-
     gradient.addColorStop(0.0, "rgba(255, 255, 255, 1)");
     gradient.addColorStop(0.2, "rgba(191, 255, 0, 1)");
     gradient.addColorStop(0.4, "rgba(64, 224, 208, 1)");
     gradient.addColorStop(1.0, "rgba(64, 224, 208, 0)");
-
     context.fillStyle = gradient;
     context.fillRect(0, 0, canvas.width, canvas.height);
-
     return new THREE.CanvasTexture(canvas);
 }
-
 function fireProjectile() {
     const soundClone = laserSound.cloneNode();
     soundClone.volume = laserSound.volume;
     soundClone.play();
-
     const projectileTexture = createEnergyBlastTexture();
     const projectileMaterial = new THREE.SpriteMaterial({
         map: projectileTexture,
@@ -238,29 +276,22 @@ function fireProjectile() {
     });
     const projectileVisual = new THREE.Sprite(projectileMaterial);
     projectileVisual.scale.set(1, 1, 1);
-
     const projectileShape = new CANNON.Sphere(0.2);
     const projectileBody = new CANNON.Body({
         mass: 0.1,
         shape: projectileShape,
         linearDamping: 0,
     });
-
     projectileBody.quaternion.copy(player.body.quaternion);
-
     const startPosition = player.body.position.clone();
     const forward = player.body.quaternion.vmult(new CANNON.Vec3(0, 0, 1));
     startPosition.vadd(forward.scale(1.5), startPosition);
     projectileBody.position.copy(startPosition);
-
     const projectileSpeed = 150;
     projectileBody.velocity = forward.scale(projectileSpeed);
-
     scene.add(projectileVisual);
     world.addBody(projectileBody);
-
     projectiles.push({ visual: projectileVisual, body: projectileBody });
-
     setTimeout(() => {
         if (projectileVisual.parent) scene.remove(projectileVisual);
         world.removeBody(projectileBody);
@@ -272,17 +303,25 @@ function fireProjectile() {
 function animate() {
     requestAnimationFrame(animate);
     const deltaTime = clock.getDelta();
+    const elapsedTime = clock.getElapsedTime();
 
     if (deltaTime > 0) {
         world.step(1 / 60, deltaTime, 3);
     }
 
+    // Hacemos que roten lentamente a diferentes velocidades para simular movimiento
+    starLayers.forEach((layer, index) => {
+        // La velocidad de rotación depende de la capa (índice)
+        const rotationSpeed = 0.01 * (index + 1) * deltaTime;
+        layer.rotation.y -= rotationSpeed * 0.1; // Rotación sutil
+        layer.rotation.x -= rotationSpeed * 0.05;
+    });
+
+    // ... (El resto del bucle de animación para el jugador, HUD, cámara, etc., no cambia) ...
     if (player.body) {
         const currentMoveSpeed = keysPressed["ShiftLeft"]
             ? MOVE_SPEED * BOOST_MULTIPLIER
             : MOVE_SPEED;
-
-        // --- MOVIMIENTO DE TRASLACIÓN (WASD + Espacio/Ctrl/X/Enter) ---
         if (keysPressed["KeyW"]) {
             const forwardForce = new CANNON.Vec3(0, 0, currentMoveSpeed);
             player.body.applyLocalForce(forwardForce, CANNON.Vec3.ZERO);
@@ -316,8 +355,6 @@ function animate() {
             fireProjectile();
             lastFireTime = Date.now();
         }
-
-        // --- MOVIMIENTO DE ROTACIÓN (Flechas + Q/E) - CON LÍMITE DE PITCH ---
         const forwardVector = player.body.quaternion.vmult(
             new CANNON.Vec3(0, 0, 1)
         );
@@ -325,21 +362,18 @@ function animate() {
         const dot = forwardVector.dot(worldUp);
         const localAngularVelocity = new CANNON.Vec3(0, 0, 0);
         if (keysPressed["ArrowUp"]) {
-            if (dot < 0.98) localAngularVelocity.x = -ROTATION_SPEED;
+            if (dot < 0.7) localAngularVelocity.x = -ROTATION_SPEED;
         } else if (keysPressed["ArrowDown"]) {
-            if (dot > -0.98) localAngularVelocity.x = ROTATION_SPEED;
+            if (dot > -0.7) localAngularVelocity.x = ROTATION_SPEED;
         }
         if (keysPressed["ArrowLeft"]) localAngularVelocity.y = ROTATION_SPEED;
         else if (keysPressed["ArrowRight"])
             localAngularVelocity.y = -ROTATION_SPEED;
         if (keysPressed["KeyQ"]) localAngularVelocity.z = -ROLL_SPEED;
         else if (keysPressed["KeyE"]) localAngularVelocity.z = ROLL_SPEED;
-
         const worldAngularVelocity =
             player.body.quaternion.vmult(localAngularVelocity);
         player.body.angularVelocity.copy(worldAngularVelocity);
-
-        // --- ACTUALIZACIÓN DE LA INTERFAZ (HUD) ---
         if (speedIndicator && altitudeIndicator) {
             const currentSpeed = player.body.velocity.length();
             const maxSpeed = MOVE_SPEED * 1.5;
@@ -348,7 +382,6 @@ function animate() {
                 0,
                 Math.min(280, speedPosition)
             )}px`;
-
             const currentAltitude = player.body.position.y;
             const maxAltitude = 100;
             const altitudePosition = mapRange(
@@ -364,8 +397,6 @@ function animate() {
             )}px`;
         }
     }
-
-    // Sincronización entre física y visual
     if (player.visual && player.body) {
         targetPosition.copy(player.body.position);
         targetQuaternion.copy(player.body.quaternion);
@@ -379,8 +410,6 @@ function animate() {
         );
         navball.update(player.visual.quaternion);
     }
-
-    // Animación cosmética del gimbal
     if (player.gimbal) {
         let targetTilt = 0;
         if (keysPressed["KeyW"]) {
@@ -388,14 +417,12 @@ function animate() {
         } else if (keysPressed["KeyX"] || keysPressed["KeyS"]) {
             targetTilt = -TILT_AMOUNT;
         }
-
         let targetBank = 0;
         if (keysPressed["ArrowLeft"]) {
             targetBank = BANK_AMOUNT;
         } else if (keysPressed["ArrowRight"]) {
             targetBank = -BANK_AMOUNT;
         }
-
         player.gimbal.rotation.x = THREE.MathUtils.lerp(
             player.gimbal.rotation.x,
             targetTilt,
@@ -407,8 +434,6 @@ function animate() {
             VISUAL_SMOOTHING
         );
     }
-
-    // Lógica de la cámara
     if (player.visual) {
         const cameraOffset = new THREE.Vector3(0, 0, -cameraZoomLevel);
         cameraOffset.applyQuaternion(player.visual.quaternion);
@@ -422,8 +447,6 @@ function animate() {
         );
         camera.lookAt(cameraLookAtTarget);
     }
-
-    // Lógica del Crosshair
     if (player.visual && crosshair) {
         const reticleTargetPosition = new THREE.Vector3(
             0,
@@ -438,22 +461,24 @@ function animate() {
         crosshair.style.left = `${x}px`;
         crosshair.style.top = `${y}px`;
     }
-
-    // Lógica de Proyectiles
     for (const projectile of projectiles) {
         projectile.visual.position.copy(projectile.body.position);
         projectile.visual.quaternion.copy(projectile.body.quaternion);
     }
 
-    renderer.render(scene, camera);
+    composer.render();
     navball.render();
 }
 
 initializeScene();
 
 window.addEventListener("resize", () => {
+    // ... las líneas para la cámara y el renderer no cambian ...
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
+
+    // ¡NUEVO! Actualiza el tamaño del composer
+    composer.setSize(window.innerWidth, window.innerHeight);
 });
