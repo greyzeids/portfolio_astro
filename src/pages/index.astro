@@ -1,17 +1,16 @@
 ---
+// index.astro (la parte superior no cambia)
 import Layout from '../layouts/Layout.astro';
 import ThreeCanvas from '../components/ThreeCanvas.astro';
 import '../styles/splash_screen.css';
-import AudioPlayer from '../components/AudioPlayer.astro';
 ---
 <Layout title="Miquel Carnot - Portfolio" bodyClass="game-body">
-
-    <AudioPlayer client:load /> 
 
     <div id="splash-screen">
         <canvas id="splash-canvas"></canvas>
 
         <div id="mecha-hud">
+
             <div class="hud-top">
                 <div id="health-bar">
                     <div class="bar-label">VITALITY</div>
@@ -38,6 +37,7 @@ import AudioPlayer from '../components/AudioPlayer.astro';
                 </div>
                 <div class="compass-marker"></div>
             </div>
+
         </div>
 
         <div id="glitch-overlay">
@@ -53,51 +53,47 @@ import AudioPlayer from '../components/AudioPlayer.astro';
 </Layout>
 
 <script>
+    // La importación de splash-experience.js se puede quitar si lo has vaciado
+    // import '../scripts/splash-experience.js';
 
     // --- ELEMENTOS DEL DOM ---
-    const splashScreen = document.getElementById('splash-screen') as HTMLElement | null;
-    const mainExperience = document.getElementById('main-experience') as HTMLElement | null;
-    const glitchOverlay = document.getElementById('glitch-overlay') as HTMLElement | null;
-    const glitchText = document.getElementById('glitch-text') as HTMLElement | null;
-    const targetReticle = document.getElementById('target-reticle') as HTMLElement | null;
+    const splashScreen = document.getElementById('splash-screen');
+    const mainExperience = document.getElementById('main-experience');
+    const glitchOverlay = document.getElementById('glitch-overlay');
+    const glitchText = document.getElementById('glitch-text');
+    
+    // ¡NUEVO! Obtenemos la retícula para animarla
+    const targetReticle = document.getElementById('target-reticle');
 
-    const backgroundMusic = document.getElementById('background-music') as HTMLAudioElement | null;
-
-    if (splashScreen && mainExperience && glitchOverlay && glitchText && targetReticle && backgroundMusic) {
+    if (splashScreen && mainExperience && glitchOverlay && glitchText && targetReticle) {
         
         // --- ANIMACIÓN DE LA RETÍCULA AL PASAR EL RATÓN ---
         glitchText.addEventListener('mouseover', () => {
+             // Añadimos la clase que activa la animación CSS
              targetReticle.classList.add('locked-on');
         });
 
         glitchText.addEventListener('mouseout', () => {
+            // Quitamos la clase cuando el ratón sale
             targetReticle.classList.remove('locked-on');
         });
         
-        // --- LÓGICA DE TRANSICIÓN AL HACER CLIC EN "[ INICIAR ]" Y ACTIVAR MÚSICA---
+        // --- LÓGICA DE TRANSICIÓN AL HACER CLIC ---
         glitchText.addEventListener('click', () => {
-            backgroundMusic.play()
-                .then(() => {
-                    console.log('Música de fondo iniciada con éxito al pulsar [ INICIAR ].');
-                })
-                .catch(error => {
-                    console.error('Error al intentar reproducir la música al hacer clic en [ INICIAR ]:', error);
-                    alert('El sonido no pudo iniciar automáticamente. Puede que necesites interacción adicional.');
-                });
-
+            // El resto de la lógica del glitch se queda igual
             glitchOverlay.classList.add('active');
 
             setTimeout(() => {
                 splashScreen.style.opacity = '0';
                 mainExperience.style.visibility = 'visible';
-            }, 1000); 
+            }, 1000);
 
             splashScreen.addEventListener('transitionend', () => {
-                splashScreen.remove(); 
-            }, { once: true }); 
+                splashScreen.remove();
+            }, { once: true });
         });
 
     } else {
-        console.error("Error: No se encontraron todos los elementos HTML necesarios para el Mecha HUD o el audio.");
+        console.error("Error: No se encontraron los elementos necesarios para el Mecha HUD.");
     }
 </script>
