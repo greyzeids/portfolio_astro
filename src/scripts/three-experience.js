@@ -748,17 +748,38 @@ function animate() {
     navball.render();
 }
 
-initializeScene();
+// --- Función principal de inicialización ---
+async function initThreeExperience() {
+    try {
+        console.log("🎮 Inicializando experiencia 3D...");
+        await initializeScene();
 
-// --- Optimización: Debounce para resize ---
-let resizeTimeout;
-window.addEventListener("resize", () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        composer.setSize(window.innerWidth, window.innerHeight);
-    }, 100);
-});
+        // --- Optimización: Debounce para resize ---
+        let resizeTimeout;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                composer.setSize(window.innerWidth, window.innerHeight);
+            }, 100);
+        });
+
+        console.log("✅ Experiencia 3D inicializada correctamente");
+        return true;
+    } catch (error) {
+        console.error("❌ Error inicializando experiencia 3D:", error);
+        throw error;
+    }
+}
+
+// --- Exportar la función para lazy loading ---
+export default initThreeExperience;
+
+// --- Inicialización automática para compatibilidad ---
+// Solo se ejecuta si no se está usando lazy loading
+if (typeof window !== "undefined" && !window.THREE_LAZY_LOADING) {
+    initThreeExperience();
+}
