@@ -41,4 +41,28 @@ const { title, bodyClass = 'content-body' } = Astro.props;
 
     <slot />
 </body>
+
+<script>
+    // Detectar la página actual y marcar el enlace activo
+    function setActiveNavLink() {
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('.main-header nav a');
+        
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (href === currentPath) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+    }
+
+    // Ejecutar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setActiveNavLink);
+    } else {
+        setActiveNavLink();
+    }
+</script>
 </html>
