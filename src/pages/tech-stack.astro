@@ -1,0 +1,139 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/game_hud.css';
+---
+
+<Layout title="Tech Stack - Miquel Carnot" bodyClass="game-body">
+    <div id="tech-stack-experience">
+        <!-- Canvas dedicado para TechStackEffect -->
+        <canvas id="tech-canvas"></canvas>
+        
+
+    </div>
+</Layout>
+
+<style>
+    #tech-stack-experience {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    #tech-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        background: #000033;
+    }
+
+
+</style>
+
+<script>
+    import { TechStackEffect } from '../scripts/TechStackEffect.js';
+    import * as THREE from 'three';
+    import * as CANNON from 'cannon-es';
+
+    // Variables globales para la experiencia
+    let scene: THREE.Scene;
+    let camera: THREE.PerspectiveCamera;
+    let renderer: THREE.WebGLRenderer;
+    let world: CANNON.World;
+    let techStackEffect: TechStackEffect;
+    let animationId: number;
+
+    // Elementos del DOM
+    const canvas = document.getElementById('tech-canvas') as HTMLCanvasElement;
+
+    // Inicializar la experiencia
+    async function initTechStackExperience() {
+        console.log('🚀 Inicializando experiencia Tech Stack...');
+
+        try {
+            // Configurar Three.js
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 10;
+
+            // Configurar renderer
+            renderer = new THREE.WebGLRenderer({ 
+                canvas, 
+                antialias: true,
+                alpha: false
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000033);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Configurar Cannon.js
+            world = new CANNON.World();
+            world.gravity.set(0, 0, 0);
+
+            console.log('✅ Three.js y Cannon.js configurados');
+
+            // Crear efecto de tech stack
+            techStackEffect = new TechStackEffect(scene, world, camera, renderer);
+
+            // Configurar URLs personalizadas para los logos de tecnología
+            techStackEffect.setTechLogoUrls([
+                "/models/tech-logos/react.glb",
+                "/models/tech-logos/html5.glb",
+                "/models/tech-logos/css3.glb",
+            ]);
+
+            console.log('✅ TechStackEffect creado');
+
+            // Activar el modo tech logos inmediatamente
+            await techStackEffect.switchToTechLogos();
+            console.log('✅ Modo tech logos activado');
+
+            // Iniciar animación
+            animate();
+
+        } catch (error) {
+            console.error('❌ Error inicializando Tech Stack:', error);
+        }
+    }
+
+    function animate() {
+        animationId = requestAnimationFrame(animate);
+
+        try {
+            const deltaTime = 1/60; // Aproximación simple
+            world.step(deltaTime);
+            techStackEffect.update(deltaTime);
+            renderer.render(scene, camera);
+        } catch (error) {
+            console.error('❌ Error en animación:', error);
+            cancelAnimationFrame(animationId);
+        }
+    }
+
+    // Event listeners
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Inicializar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTechStackExperience);
+    } else {
+        initTechStackExperience();
+    }
+
+    // Cleanup al salir de la página
+    window.addEventListener('beforeunload', () => {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+        if (techStackEffect) {
+            techStackEffect.dispose();
+        }
+    });
+</script> 
