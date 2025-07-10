@@ -1,5 +1,8 @@
 ---
 import '../styles/global.css';
+import { Image } from 'astro:assets';
+import linkedinIcon from '../../public/icons/linkedin-white.svg';
+import githubIcon from '../../public/icons/github-white.svg';
 
 interface Props {
 	title: string;
@@ -27,10 +30,10 @@ const { title, bodyClass = 'content-body' } = Astro.props;
         </nav>
         <div class="header-actions">
             <a href="https://www.linkedin.com/in/miquelcarnot/" target="_blank" aria-label="LinkedIn" rel="noopener" class="social-icon">
-                <img src="/icons/linkedin-white.svg" alt="LinkedIn" />
+                <Image src={linkedinIcon} alt="LinkedIn" width={24} height={24} />
             </a>
             <a href="https://github.com/greyzeids" target="_blank" aria-label="GitHub" rel="noopener" class="social-icon">
-                <img src="/icons/github-white.svg" alt="GitHub" />
+                <Image src={githubIcon} alt="GitHub" width={24} height={24} />
             </a>
             <a href="/about#contact" class="connect-button-header">Let's Connect</a>
         </div>

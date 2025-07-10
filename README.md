@@ -6,28 +6,28 @@ El proyecto está construido sobre **Astro** para garantizar un rendimiento web 
 
 ## 🌐 Demo en Vivo
 
-Puedes experimentar la versión desplegada aquí: **[portfolio-astro-ruby.vercel.app](https://portfolio-astro-ruby-six.vercel.app/)**
+Puedes experimentar la versión desplegada aquí: **[portfolio-eta-nine.vercel.app](https://portfolio-astro-eta-nine.vercel.app/)**
 
 ## ✨ Características Principales
 
-* **Navegación 3D Interactiva**: Controla una nave espacial con 6 grados de libertad (6-DoF) usando el teclado. Muévete, acelera, frena y explora el entorno.
+-   **Navegación 3D Interactiva**: Controla una nave espacial con 6 grados de libertad (6-DoF) usando el teclado. Muévete, acelera, frena y explora el entorno.
 
-* **Fondo Dinámico**: Un campo de estrellas generado proceduralmente que da una sensación de inmensidad y movimiento.
+-   **Fondo Dinámico**: Un campo de estrellas generado proceduralmente que da una sensación de inmensidad y movimiento.
 
-* **Físicas Realistas**: Implementación de `cannon-es` para gestionar el movimiento de la nave y los proyectiles, incluyendo damping y fuerzas.
+-   **Físicas Realistas**: Implementación de `cannon-es` para gestionar el movimiento de la nave y los proyectiles, incluyendo damping y fuerzas.
 
-* **Rendimiento Optimizado**: Construido con Astro, que envía cero JavaScript por defecto a las páginas estáticas, asegurando tiempos de carga ultrarrápidos. La escena 3D se carga como una "isla de interactividad".
+-   **Rendimiento Optimizado**: Construido con Astro, que envía cero JavaScript por defecto a las páginas estáticas, asegurando tiempos de carga ultrarrápidos. La escena 3D se carga como una "isla de interactividad".
 
-* **Diseño Transparente y Moderno**: Una interfaz de usuario limpia y superpuesta que no interfiere con la experiencia 3D, junto con efectos sutiles como el "glitch" en la navegación.
+-   **Diseño Transparente y Moderno**: Una interfaz de usuario limpia y superpuesta que no interfiere con la experiencia 3D, junto con efectos sutiles como el "glitch" en la navegación.
 
 ## 🛠️ Tecnologías Utilizadas
 
-* **Framework**: [Astro](https://astro.build/)
-* **Renderizado 3D**: [Three.js](https://threejs.org/)
-* **Motor de Físicas**: [cannon-es](https://github.com/pmndrs/cannon-es)
-* **Lenguaje**: TypeScript y JavaScript
-* **Estilos**: CSS puro
-* **Despliegue**: [Vercel](https://vercel.com/)
+-   **Framework**: [Astro](https://astro.build/)
+-   **Renderizado 3D**: [Three.js](https://threejs.org/)
+-   **Motor de Físicas**: [cannon-es](https://github.com/pmndrs/cannon-es)
+-   **Lenguaje**: TypeScript y JavaScript
+-   **Estilos**: CSS puro
+-   **Despliegue**: [Vercel](https://vercel.com/)
 
 ## 🚀 Cómo Empezar
 
@@ -35,17 +35,19 @@ Si quieres ejecutar este proyecto en tu máquina local, sigue estos pasos.
 
 ### Prerrequisitos
 
-* [Node.js](https://nodejs.org/) (versión 18.0 o superior)
-* Un gestor de paquetes como `npm`, `pnpm` o `yarn`.
+-   [Node.js](https://nodejs.org/) (versión 18.0 o superior)
+-   Un gestor de paquetes como `npm`, `pnpm` o `yarn`.
 
 ### Instalación
 
 1.  Clona el repositorio:
+
     ```bash
     git clone [https://github.com/greyzeids/portfolio-astro.git](https://github.com/greyzeids/portfolio-astro.git)
     ```
 
 2.  Navega a la carpeta del proyecto:
+
     ```bash
     cd portfolio-astro
     ```
@@ -59,11 +61,11 @@ Si quieres ejecutar este proyecto en tu máquina local, sigue estos pasos.
 
 Todos los comandos se ejecutan desde la raíz del proyecto:
 
-| Comando         | Acción                                             |
-| :-------------- | :------------------------------------------------- |
-| `npm run dev`   | Inicia el servidor de desarrollo en `localhost:4321`.  |
-| `npm run build` | Compila el sitio para producción en la carpeta `./dist/`. |
-| `npm run preview` | Previsualiza el build de producción localmente.       |
+| Comando           | Acción                                                    |
+| :---------------- | :-------------------------------------------------------- |
+| `npm run dev`     | Inicia el servidor de desarrollo en `localhost:4321`.     |
+| `npm run build`   | Compila el sitio para producción en la carpeta `./dist/`. |
+| `npm run preview` | Previsualiza el build de producción localmente.           |
 
 ## 📦 Despliegue
 
@@ -79,5 +81,5 @@ El proyecto está configurado para despliegue continuo en Vercel. Cualquier `pus
 
 ## 👤 Contacto
 
-* **GitHub**: [@greyzeids](https://github.com/greyzeids)
-* **LinkedIn**: [Miquel Carnot](https://www.linkedin.com/
+-   **GitHub**: [@greyzeids](https://github.com/greyzeids)
+-   **LinkedIn**: [Miquel Carnot](https://www.linkedin.com/
