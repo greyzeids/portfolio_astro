@@ -21,12 +21,33 @@ body.content-body {
     overflow-y: scroll;
 }
 
-/* ----- CANVAS DE THREE.JS (Solo visible en game-body) ----- */
+/* Canvas de fondo Three.js */
 #bg {
     position: fixed;
     top: 0;
     left: 0;
-    z-index: -1;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    display: block;
+    background: #000;
+    pointer-events: none; /* Opcional: permite clics a través del canvas */
+}
+
+/* HUD encima del canvas */
+#crosshair-container,
+#speed-indicator,
+#altitude-indicator {
+    position: absolute;
+    z-index: 10;
+}
+
+/* Asegura que el body no tenga scroll ni margenes extra */
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
 }
 
 /* ----- HEADER (Compartido en todas las páginas) ----- */
