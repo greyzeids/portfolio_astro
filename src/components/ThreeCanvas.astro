@@ -3,9 +3,18 @@
 import '../styles/game_hud.css';
 ---
 
+<!-- Indicador de carga para Three.js -->
+<div id="three-loading" class="three-loading">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Cargando experiencia 3D...</div>
+    <div class="loading-progress">
+        <div class="progress-bar"></div>
+    </div>
+</div>
+
 <!-- Tu canvas y crosshair existentes -->
-<canvas id="bg"></canvas>
-<div id="crosshair-container">
+<canvas id="bg" style="display: none;"></canvas>
+<div id="crosshair-container" style="display: none;">
     <div class="crosshair-dot"></div>
     <div class="crosshair-bracket top-left"></div>
     <div class="crosshair-bracket top-right"></div>
@@ -14,7 +23,7 @@ import '../styles/game_hud.css';
 </div>
 
 <!-- Contenedor para la interfaz del juego (Estructura Actualizada) -->
-<div id="game-hud">
+<div id="game-hud" style="display: none;">
 
     <!-- Medidor Izquierdo (Velocidad) -->
     <div class="gauge-container left">
@@ -49,6 +58,224 @@ import '../styles/game_hud.css';
     <div id="compass-frame"></div>
 </div>
 
+<style>
+.three-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    color: #00d4ff;
+    font-family: 'Courier New', monospace;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(0, 212, 255, 0.3);
+    border-top: 3px solid #00d4ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+.loading-text {
+    font-size: 18px;
+    margin-bottom: 15px;
+    text-shadow: 0 0 10px #00d4ff;
+}
+
+.loading-progress {
+    width: 200px;
+    height: 4px;
+    background: rgba(0, 212, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #00d4ff, #64e6ff);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 2px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.three-loading.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+</style>
+
 <script>
-    import "../scripts/three-experience.js";
+    // --- Lazy Loading Manager para Three.js ---
+    class ThreeJSLoader {
+        private isLoading: boolean;
+        private isLoaded: boolean;
+        private loadingElement: HTMLElement | null;
+        private canvas: HTMLCanvasElement | null;
+        private crosshair: HTMLElement | null;
+        private gameHud: HTMLElement | null;
+        private progressBar: HTMLElement | null;
+        private loadingText: HTMLElement | null;
+
+        constructor() {
+            this.isLoading = false;
+            this.isLoaded = false;
+            this.loadingElement = document.getElementById('three-loading');
+            this.canvas = document.getElementById('bg') as HTMLCanvasElement;
+            this.crosshair = document.getElementById('crosshair-container');
+            this.gameHud = document.getElementById('game-hud');
+            this.progressBar = document.querySelector('.progress-bar');
+            this.loadingText = document.querySelector('.loading-text');
+        }
+
+        // Inicializar el lazy loading
+        async init(): Promise<void> {
+            console.log('🚀 Iniciando lazy loading de Three.js...');
+            
+            // Mostrar indicador de carga
+            this.showLoading();
+            
+            try {
+                // Simular progreso de carga
+                this.updateProgress(10, 'Cargando librerías 3D...');
+                
+                // Cargar Three.js dinámicamente
+                await this.loadThreeJS();
+                this.updateProgress(30, 'Inicializando escena...');
+                
+                // Cargar la experiencia 3D
+                await this.loadThreeExperience();
+                this.updateProgress(70, 'Configurando controles...');
+                
+                // Finalizar carga
+                this.updateProgress(100, '¡Listo para explorar!');
+                await this.delay(500);
+                
+                // Ocultar loading y mostrar experiencia
+                this.hideLoading();
+                this.showExperience();
+                
+                console.log('✅ Three.js cargado exitosamente');
+                
+            } catch (error) {
+                console.error('❌ Error cargando Three.js:', error);
+                this.showError('Error al cargar la experiencia 3D');
+            }
+        }
+
+        // Cargar Three.js dinámicamente
+        async loadThreeJS(): Promise<void> {
+            // Verificar si Three.js ya está disponible
+            if ((window as any).THREE) {
+                console.log('Three.js ya está cargado');
+                return;
+            }
+
+            // Cargar Three.js desde CDN o bundle
+            return new Promise<void>((resolve, reject) => {
+                // En desarrollo, usamos el import dinámico
+                // En producción, podrías cargar desde CDN
+                import('../scripts/three-experience.js')
+                    .then(() => {
+                        console.log('Three.js cargado dinámicamente');
+                        resolve();
+                    })
+                    .catch(reject);
+            });
+        }
+
+        // Cargar la experiencia 3D
+        async loadThreeExperience(): Promise<void> {
+            try {
+                // Importar y ejecutar la experiencia 3D
+                const { default: initThreeExperience } = await import('../scripts/three-experience.js');
+                
+                if (typeof initThreeExperience === 'function') {
+                    await initThreeExperience();
+                } else {
+                    // Si no hay función de inicialización, asumimos que se ejecuta automáticamente
+                    console.log('Experiencia 3D inicializada automáticamente');
+                }
+            } catch (error) {
+                console.error('Error cargando experiencia 3D:', error);
+                throw error;
+            }
+        }
+
+        // Mostrar indicador de carga
+        showLoading() {
+            if (this.loadingElement) {
+                this.loadingElement.style.display = 'flex';
+            }
+        }
+
+        // Ocultar indicador de carga
+        hideLoading() {
+            if (this.loadingElement) {
+                this.loadingElement.classList.add('hidden');
+                setTimeout(() => {
+                    this.loadingElement.style.display = 'none';
+                }, 500);
+            }
+        }
+
+        // Mostrar experiencia 3D
+        showExperience(): void {
+            if (this.canvas) this.canvas.style.display = 'block';
+            if (this.crosshair) this.crosshair.style.display = 'block';
+            if (this.gameHud) this.gameHud.style.display = 'block';
+        }
+
+        // Actualizar progreso de carga
+        updateProgress(percentage: number, text: string): void {
+            if (this.progressBar) {
+                this.progressBar.style.width = `${percentage}%`;
+            }
+            if (this.loadingText) {
+                this.loadingText.textContent = text;
+            }
+        }
+
+        // Mostrar error
+        showError(message: string): void {
+            if (this.loadingText) {
+                this.loadingText.textContent = message;
+                this.loadingText.style.color = '#ff4444';
+            }
+        }
+
+        // Utilidad para delays
+        delay(ms: number): Promise<void> {
+            return new Promise<void>(resolve => setTimeout(resolve, ms));
+        }
+    }
+
+    // --- Inicialización cuando el DOM esté listo ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Marcar que estamos usando lazy loading
+        (window as any).THREE_LAZY_LOADING = true;
+        
+        const threeLoader = new ThreeJSLoader();
+        
+        // Iniciar carga después de un pequeño delay para mejor UX
+        setTimeout(() => {
+            if (threeLoader) {
+                threeLoader.init();
+            }
+        }, 100);
+    });
 </script>
