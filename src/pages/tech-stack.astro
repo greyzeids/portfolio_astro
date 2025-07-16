@@ -8,7 +8,11 @@ import '../styles/game_hud.css';
         <!-- Canvas dedicado para TechStackEffect -->
         <canvas id="tech-canvas"></canvas>
         
-
+        <!-- Mensaje de espera -->
+        <div id="waiting-message">
+            <h2>Tech Stack</h2>
+            <p>Los logos de tecnologías aparecerán cuando el mecha llegue...</p>
+        </div>
     </div>
 </Layout>
 
@@ -30,7 +34,27 @@ import '../styles/game_hud.css';
         background: #000033;
     }
 
+    #waiting-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #00d4ff;
+        z-index: 10;
+        font-family: 'Courier New', monospace;
+    }
 
+    #waiting-message h2 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 10px #00d4ff;
+    }
+
+    #waiting-message p {
+        font-size: 1.2rem;
+        opacity: 0.8;
+    }
 </style>
 
 <script>
@@ -77,6 +101,7 @@ import '../styles/game_hud.css';
 
             // Crear efecto de tech stack
             techStackEffect = new TechStackEffect(scene, world, camera, renderer);
+            (window as any).techStackEffect = techStackEffect;
 
             // Configurar URLs personalizadas para los logos de tecnología
             techStackEffect.setTechLogoUrls([
@@ -87,9 +112,19 @@ import '../styles/game_hud.css';
 
             console.log('✅ TechStackEffect creado');
 
-            // Activar el modo tech logos inmediatamente
-            await techStackEffect.switchToTechLogos();
-            console.log('✅ Modo tech logos activado');
+            // NO activar el modo tech logos inmediatamente - esperar a la animación
+            // await techStackEffect.switchToTechLogos();
+            console.log('✅ TechStackEffect listo para animación');
+
+            // Función para mostrar los logos cuando el mecha llegue
+            (window as any).showTechLogos = async () => {
+                const waitingMessage = document.getElementById('waiting-message');
+                if (waitingMessage) {
+                    waitingMessage.style.display = 'none';
+                }
+                await techStackEffect.preloadTechLogos();
+                techStackEffect.spawnTechLogosAround({ x: 0, y: 0, z: 0 }, 4);
+            };
 
             // Iniciar animación
             animate();
