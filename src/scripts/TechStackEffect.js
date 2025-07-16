@@ -225,6 +225,43 @@ export class TechStackEffect {
         );
     }
 
+    spawnTechLogosAround(center, radius = 4) {
+        // Elimina logos previos
+        this.objectsData.forEach((obj) => {
+            this.world.removeBody(obj.body);
+            this.scene.remove(obj.visual);
+        });
+        this.objectsData.length = 0;
+        const normalizedLogoSize = 1.5;
+        const numberOfLogos = this.loadedTechLogoAssets.length;
+        if (numberOfLogos === 0) return;
+        for (let i = 0; i < numberOfLogos; i++) {
+            const angle = (i / numberOfLogos) * Math.PI * 2;
+            const x = center.x + Math.cos(angle) * radius;
+            const y = center.y + Math.sin(angle) * radius;
+            const z = center.z;
+            const visual = new THREE.Group();
+            const logoModelInstance = this.loadedTechLogoAssets[i].clone();
+            this.normalizeAndCenterModel(logoModelInstance, normalizedLogoSize);
+            visual.add(logoModelInstance);
+            visual.position.set(x, y, z);
+            this.scene.add(visual);
+            // Cuerpo físico (opcional, para interacción)
+            const logoShape = new CANNON.Sphere(normalizedLogoSize / 2);
+            const body = new CANNON.Body({
+                mass: 1,
+                shape: logoShape,
+                position: new CANNON.Vec3(x, y, z),
+                fixedRotation: true,
+                angularDamping: 0.8,
+                linearDamping: 0.85,
+                material: this.defaultMaterial,
+            });
+            this.world.addBody(body);
+            this.objectsData.push({ visual, body });
+        }
+    }
+
     normalizeAndCenterModel(model, targetSize) {
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
