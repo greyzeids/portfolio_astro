@@ -312,6 +312,104 @@ const laserSound = new Audio("/sounds/plasma_gun.mp3");
 laserSound.volume = 0.2;
 laserSound.preload = "auto";
 
+// --- Sonido de motor permanente ---
+const ENGINE_VOLUME_NORMAL = 0.2;
+const ENGINE_VOLUME_NITRO = 0.3;
+const ENGINE_FADE_SPEED = 0.05;
+
+const engineSound = new Audio("/sounds/engine.wav");
+engineSound.loop = true;
+engineSound.volume = 0; // Arranca en silencio
+engineSound.preload = "auto";
+let engineTargetVolume = 0; // Arranca en silencio
+let engineShouldPlay = false;
+
+// --- Sonido de nitro ---
+const NITRO_VOLUME = 0.7; // <--- Modifica aquí el volumen máximo del nitro
+const NITRO_FADE_SPEED = 0.05; // <--- Modifica aquí la velocidad del fade del nitro
+const nitroSound = new Audio("/sounds/nitro.wav");
+nitroSound.loop = true;
+nitroSound.volume = 0;
+nitroSound.preload = "auto";
+let nitroTargetVolume = 0;
+let nitroShouldPlay = false;
+
+function updateEnginePlayback() {
+    // Si alguna de las teclas WASD está presionada
+    if (
+        keysPressed["KeyW"] ||
+        keysPressed["KeyA"] ||
+        keysPressed["KeyS"] ||
+        keysPressed["KeyD"]
+    ) {
+        if (!engineShouldPlay) {
+            engineShouldPlay = true;
+            engineSound.currentTime = 0;
+            engineSound.play().catch(() => {});
+        }
+        engineTargetVolume = ENGINE_VOLUME_NORMAL;
+    } else {
+        if (engineShouldPlay) {
+            engineShouldPlay = false;
+            engineTargetVolume = 0;
+        }
+    }
+}
+
+window.addEventListener("keydown", (event) => {
+    if (["KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) {
+        updateEnginePlayback();
+    }
+    if (
+        (event.code === "ShiftLeft" || event.code === "ShiftRight") &&
+        engineShouldPlay
+    ) {
+        if (!nitroShouldPlay) {
+            nitroShouldPlay = true;
+            nitroSound.currentTime = 0;
+            nitroSound.play().catch(() => {});
+        }
+        nitroTargetVolume = NITRO_VOLUME;
+    }
+});
+window.addEventListener("keyup", (event) => {
+    if (["KeyW", "KeyA", "KeyS", "KeyD"].includes(event.code)) {
+        updateEnginePlayback();
+    }
+    if (event.code === "ShiftLeft" || event.code === "ShiftRight") {
+        nitroTargetVolume = 0;
+        nitroShouldPlay = false;
+    }
+});
+
+// Fade suave en el loop de animación principal para motor y nitro
+function fadeEngineAndNitroVolume() {
+    // Motor
+    if (Math.abs(engineSound.volume - engineTargetVolume) > 0.01) {
+        engineSound.volume +=
+            (engineTargetVolume - engineSound.volume) * ENGINE_FADE_SPEED;
+    } else {
+        engineSound.volume = engineTargetVolume;
+        if (engineSound.volume === 0 && !engineShouldPlay) {
+            engineSound.pause();
+            engineSound.currentTime = 0;
+        }
+    }
+    // Nitro
+    if (Math.abs(nitroSound.volume - nitroTargetVolume) > 0.01) {
+        nitroSound.volume +=
+            (nitroTargetVolume - nitroSound.volume) * NITRO_FADE_SPEED;
+    } else {
+        nitroSound.volume = nitroTargetVolume;
+        if (nitroSound.volume === 0 && !nitroShouldPlay) {
+            nitroSound.pause();
+            nitroSound.currentTime = 0;
+        }
+    }
+    requestAnimationFrame(fadeEngineAndNitroVolume);
+}
+fadeEngineAndNitroVolume();
+
 function mapRange(value, in_min, in_max, out_min, out_max) {
     return (
         ((value - in_min) * (out_max - out_min)) / (in_max - in_min) + out_min
@@ -381,64 +479,160 @@ async function createFloatingObjects() {
     }
     // Crear instancias flotantes
     for (const model of FLOATING_MODELS) {
-        for (let i = 0; i < FLOATING_INSTANCES; i++) {
-            const base = floatingModelsLoaded[model.name].clone();
-            // Posición aleatoria en toda la esfera de juego, pero con separación mínima
-            const minR = 0;
-            const maxR = GAME_SPHERE_RADIUS;
-            const minDistance = 120;
-            let position, r, phi, theta;
-            let attempts = 0;
-            do {
-                r = minR + Math.random() * (maxR - minR);
-                phi = Math.acos(2 * Math.random() - 1);
-                theta = 2 * Math.PI * Math.random();
-                position = new THREE.Vector3(
+        // Si es un asteroide, crear algunos en cadena y otros sueltos
+        if (model.name === "asteroid") {
+            // Número de cadenas aleatorio entre 2 y 4
+            const numCadenas = 2 + Math.floor(Math.random() * 3);
+            for (let c = 0; c < numCadenas; c++) {
+                // Longitud de la cadena aleatoria entre 4 y 6
+                const longitudCadena = 4 + Math.floor(Math.random() * 3);
+                // Posición base aleatoria, pero lejos del centro
+                const minR = 350; // Nuevo: radio mínimo para evitar el centro
+                const maxR = GAME_SPHERE_RADIUS;
+                let r = minR + Math.random() * (maxR - minR);
+                let phi = Math.acos(2 * Math.random() - 1);
+                let theta = 2 * Math.PI * Math.random();
+                let basePos = new THREE.Vector3(
                     r * Math.sin(phi) * Math.cos(theta),
                     r * Math.sin(phi) * Math.sin(theta),
                     r * Math.cos(phi)
                 );
-                attempts++;
-            } while (
-                floatingObjects.some(
-                    (obj) =>
-                        obj.mesh.position.distanceTo(position) < minDistance
-                ) &&
-                attempts < 20
-            );
-            base.position.copy(position);
-            // Escala y rotación aleatoria (ajustes para aliens)
-            let scale = 0.7 + Math.random() * 0.4;
-            if (model.name === "space_station") {
-                scale *= 3;
+                // Dirección aleatoria para la cadena
+                let dir = new THREE.Vector3(
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5
+                ).normalize();
+                // Separación entre asteroides
+                let separacion = 18 + Math.random() * 10;
+                for (let j = 0; j < longitudCadena; j++) {
+                    const base = floatingModelsLoaded[model.name].clone();
+                    // Posición alineada
+                    let pos = basePos
+                        .clone()
+                        .add(dir.clone().multiplyScalar(j * separacion));
+                    base.position.copy(pos);
+                    // Escala y rotación aleatoria
+                    let scale = 0.7 + Math.random() * 0.4;
+                    base.scale.set(scale, scale, scale);
+                    base.rotation.y = Math.random() * Math.PI * 2;
+                    // Movimiento orbital individual
+                    floatingObjects.push({
+                        mesh: base,
+                        basePos: pos.clone(),
+                        orbitRadius: 10 + Math.random() * 30,
+                        orbitSpeed: 0.06 + Math.random() * 0.16,
+                        orbitAngle: Math.random() * Math.PI * 2,
+                        orbitAxis: new THREE.Vector3(
+                            Math.random(),
+                            Math.random(),
+                            Math.random()
+                        ).normalize(),
+                        rotSpeed: 0.15 + Math.random() * 0.35,
+                    });
+                    scene.add(base);
+                }
             }
-            if (model.name === "alien_ovni") {
-                scale *= 10;
+            // El resto de asteroides sueltos
+            for (let i = 0; i < FLOATING_INSTANCES; i++) {
+                const base = floatingModelsLoaded[model.name].clone();
+                // Posición aleatoria en toda la esfera de juego, pero lejos del centro
+                const minR = 350; // Nuevo: radio mínimo para evitar el centro
+                const maxR = GAME_SPHERE_RADIUS;
+                const minDistance = 120;
+                let position, r, phi, theta;
+                let attempts = 0;
+                do {
+                    r = minR + Math.random() * (maxR - minR);
+                    phi = Math.acos(2 * Math.random() - 1);
+                    theta = 2 * Math.PI * Math.random();
+                    position = new THREE.Vector3(
+                        r * Math.sin(phi) * Math.cos(theta),
+                        r * Math.sin(phi) * Math.sin(theta),
+                        r * Math.cos(phi)
+                    );
+                    attempts++;
+                } while (
+                    floatingObjects.some(
+                        (obj) =>
+                            obj.mesh.position.distanceTo(position) < minDistance
+                    ) &&
+                    attempts < 20
+                );
+                base.position.copy(position);
+                let scale = 0.7 + Math.random() * 0.4;
+                base.scale.set(scale, scale, scale);
+                base.rotation.y = Math.random() * Math.PI * 2;
+                floatingObjects.push({
+                    mesh: base,
+                    basePos: base.position.clone(),
+                    orbitRadius: 10 + Math.random() * 30,
+                    orbitSpeed: 0.06 + Math.random() * 0.16,
+                    orbitAngle: Math.random() * Math.PI * 2,
+                    orbitAxis: new THREE.Vector3(
+                        Math.random(),
+                        Math.random(),
+                        Math.random()
+                    ).normalize(),
+                    rotSpeed: 0.15 + Math.random() * 0.35,
+                });
+                scene.add(base);
             }
-            if (model.name === "alien_jetpack") {
-                scale *= 10 * 0.67; // 10x y luego reducir un 33%
+        } else {
+            // Resto de modelos flotantes (no asteroides)
+            for (let i = 0; i < FLOATING_INSTANCES; i++) {
+                const base = floatingModelsLoaded[model.name].clone();
+                // Posición aleatoria en toda la esfera de juego, pero con separación mínima
+                const minR = 0;
+                const maxR = GAME_SPHERE_RADIUS;
+                const minDistance = 120;
+                let position, r, phi, theta;
+                let attempts = 0;
+                do {
+                    r = minR + Math.random() * (maxR - minR);
+                    phi = Math.acos(2 * Math.random() - 1);
+                    theta = 2 * Math.PI * Math.random();
+                    position = new THREE.Vector3(
+                        r * Math.sin(phi) * Math.cos(theta),
+                        r * Math.sin(phi) * Math.sin(theta),
+                        r * Math.cos(phi)
+                    );
+                    attempts++;
+                } while (
+                    floatingObjects.some(
+                        (obj) =>
+                            obj.mesh.position.distanceTo(position) < minDistance
+                    ) &&
+                    attempts < 20
+                );
+                base.position.copy(position);
+                let scale = 0.7 + Math.random() * 0.4;
+                if (model.name === "space_station") {
+                    scale *= 3;
+                }
+                if (model.name === "alien_ovni") {
+                    scale *= 10;
+                }
+                if (model.name === "alien_jetpack") {
+                    scale *= 10 * 0.67; // 10x y luego reducir un 33%
+                }
+                base.scale.set(scale, scale, scale);
+                base.rotation.y = Math.random() * Math.PI * 2;
+                floatingObjects.push({
+                    mesh: base,
+                    basePos: base.position.clone(),
+                    orbitRadius: 10 + Math.random() * 30,
+                    orbitSpeed: 0.06 + Math.random() * 0.16,
+                    orbitAngle: Math.random() * Math.PI * 2,
+                    orbitAxis: new THREE.Vector3(
+                        Math.random(),
+                        Math.random(),
+                        Math.random()
+                    ).normalize(),
+                    rotSpeed: 0.15 + Math.random() * 0.35,
+                });
+                scene.add(base);
             }
-            base.scale.set(scale, scale, scale);
-            base.rotation.y = Math.random() * Math.PI * 2;
-            // Parámetros de movimiento orbital aleatorio
-            floatingObjects.push({
-                mesh: base,
-                basePos: base.position.clone(),
-                orbitRadius: 10 + Math.random() * 30,
-                orbitSpeed: 0.03 + Math.random() * 0.08,
-                orbitAngle: Math.random() * Math.PI * 2,
-                orbitAxis: new THREE.Vector3(
-                    Math.random(),
-                    Math.random(),
-                    Math.random()
-                ).normalize(),
-                rotSpeed: 0.15 + Math.random() * 0.35,
-            });
-            scene.add(base);
-            console.log(
-                `[FLOATING] Añadido modelo: ${model.name} en posición`,
-                base.position
-            );
         }
     }
 }
@@ -454,9 +648,9 @@ function loadTechPlanet() {
                     techPlanet.parent.remove(techPlanet);
                 }
                 techPlanet = gltf.scene;
-                // Posición aleatoria en la esfera grande
-                const minR = 400;
-                const maxR = 750;
+                // Posición aleatoria dentro de la esfera de movimiento del mecha
+                const minR = 100; // Puedes ajustar el mínimo si quieres que nunca esté muy cerca del centro
+                const maxR = GAME_SPHERE_RADIUS - 20; // Margen de seguridad
                 const r = minR + Math.random() * (maxR - minR);
                 const phi = Math.acos(2 * Math.random() - 1); // Ángulo polar
                 const theta = 2 * Math.PI * Math.random(); // Ángulo azimutal
@@ -464,16 +658,45 @@ function loadTechPlanet() {
                 const y = r * Math.sin(phi) * Math.sin(theta);
                 const z = r * Math.cos(phi);
                 techPlanet.position.set(x, y, z);
-                techPlanet.scale.set(0.9, 0.9, 0.9); // Más pequeño
+                techPlanet.scale.set(9, 9, 9); // x10 más grande
                 // Optimizar el modelo
+                let boundingSphere = null;
                 techPlanet.traverse((child) => {
                     if (child.isMesh) {
                         child.geometry.computeBoundingSphere();
                         child.geometry.computeBoundingBox();
                         child.frustumCulled = true;
+                        if (
+                            !boundingSphere ||
+                            child.geometry.boundingSphere.radius >
+                                boundingSphere.radius
+                        ) {
+                            boundingSphere =
+                                child.geometry.boundingSphere.clone();
+                            boundingSphere.applyMatrix4(child.matrixWorld);
+                        }
                     }
                 });
                 scene.add(techPlanet);
+                // --- Crear cuerpo físico para el planeta ---
+                if (boundingSphere) {
+                    let planetRadius = boundingSphere.radius * 1.3; // Aumentar un 30%
+                    if (techPlanet.body) {
+                        world.removeBody(techPlanet.body);
+                    }
+                    const planetShape = new CANNON.Sphere(planetRadius);
+                    techPlanet.body = new CANNON.Body({
+                        mass: 0, // Estático
+                        shape: planetShape,
+                        position: new CANNON.Vec3(x, y, z),
+                    });
+                    world.addBody(techPlanet.body);
+                    console.log(
+                        `Cuerpo físico del planeta creado (radio: ${planetRadius.toFixed(
+                            2
+                        )})`
+                    );
+                }
                 console.log(
                     "Planeta del tech-stack añadido a la escena en posición:",
                     techPlanet.position
@@ -494,12 +717,53 @@ function loadTechPlanet() {
 
 const navball = new Navball();
 
+// --- Utilidad para extraer un Trimesh de un modelo Three.js ---
+function createTrimeshFromModel(model) {
+    // Unir todos los vértices y caras de las mallas hijas
+    let vertices = [];
+    let indices = [];
+    let offset = 0;
+    model.traverse((child) => {
+        if (
+            child.isMesh &&
+            child.geometry &&
+            child.geometry.attributes.position
+        ) {
+            const pos = child.geometry.attributes.position;
+            const index = child.geometry.index;
+            // Añadir vértices
+            for (let i = 0; i < pos.count; i++) {
+                vertices.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+            }
+            // Añadir índices
+            if (index) {
+                for (let i = 0; i < index.count; i++) {
+                    indices.push(index.getX(i) + offset);
+                }
+            } else {
+                // Si no hay índice, usar orden secuencial
+                for (let i = 0; i < pos.count; i++) {
+                    indices.push(offset + i);
+                }
+            }
+            offset += pos.count;
+        }
+    });
+    if (vertices.length === 0 || indices.length === 0) {
+        console.warn("No se pudo crear Trimesh: modelo sin geometría válida");
+        return null;
+    }
+    return new CANNON.Trimesh(
+        Float32Array.from(vertices),
+        Uint16Array.from(indices)
+    );
+}
+
 async function initializeScene() {
     console.log("Inicializando escena...");
 
     createGalacticBackground();
     createStarLayers();
-    createPoleVortexes();
     createGameBoundaries(); // Crear límites de la esfera de juego
 
     navball.init();
@@ -518,7 +782,31 @@ async function initializeScene() {
         player.visual.rotation.y = Math.PI;
         scene.add(player.visual);
 
-        const playerShape = new CANNON.Sphere(0.8);
+        // --- Calcular boundingSphere del mecha para el hitbox ---
+        let boundingSphereMecha = null;
+        modelScene.traverse((child) => {
+            if (child.isMesh) {
+                if (!child.geometry.boundingSphere)
+                    child.geometry.computeBoundingSphere();
+                if (child.geometry.boundingSphere) {
+                    // Tomar la esfera más grande encontrada
+                    if (
+                        !boundingSphereMecha ||
+                        child.geometry.boundingSphere.radius >
+                            boundingSphereMecha.radius
+                    ) {
+                        boundingSphereMecha =
+                            child.geometry.boundingSphere.clone();
+                        boundingSphereMecha.applyMatrix4(child.matrixWorld);
+                    }
+                }
+            }
+        });
+        let mechaRadius = 0.8; // Valor por defecto
+        if (boundingSphereMecha) {
+            mechaRadius = boundingSphereMecha.radius * player.visual.scale.x;
+        }
+        const playerShape = new CANNON.Sphere(mechaRadius);
         const initialCannonQuaternion = new CANNON.Quaternion();
         initialCannonQuaternion.setFromEuler(
             player.visual.rotation.x,
@@ -536,7 +824,33 @@ async function initializeScene() {
         world.addBody(player.body);
         cameraLookAtTarget.copy(player.visual.position);
         originalLinearDamping = player.body.linearDamping;
-        console.log("Jugador creado en la escena y en el mundo físico.");
+        console.log(
+            `Jugador creado en la escena y en el mundo físico (colisión: esfera, radio: ${mechaRadius.toFixed(
+                2
+            )})`
+        );
+        // --- Ajustar hitbox de modelos flotantes al tamaño real ---
+        for (const obj of floatingObjects) {
+            let boundingSphere = null;
+            obj.mesh.traverse((child) => {
+                if (child.isMesh) {
+                    if (!child.geometry.boundingSphere)
+                        child.geometry.computeBoundingSphere();
+                    if (child.geometry.boundingSphere) {
+                        if (
+                            !boundingSphere ||
+                            child.geometry.boundingSphere.radius >
+                                boundingSphere.radius
+                        ) {
+                            boundingSphere =
+                                child.geometry.boundingSphere.clone();
+                            boundingSphere.applyMatrix4(child.matrixWorld);
+                        }
+                    }
+                }
+            });
+            obj.collisionRadius = boundingSphere ? boundingSphere.radius : 1.0;
+        }
         animate();
     } catch (error) {
         console.error("No se pudo inicializar la escena.", error);
@@ -566,6 +880,21 @@ function createGalacticBackground() {
     });
 }
 
+// --- Añadir variables para el efecto de parpadeo de estrellas ---
+let twinkleStarIndices = [];
+let twinkleStarTimers = [];
+const TWINKLE_PERCENTAGE = 0.25; // Solo el 25% de las estrellas lejanas pueden parpadear
+const TWINKLE_COUNT = Math.floor(1200 * TWINKLE_PERCENTAGE); // 1200 es el número de estrellas lejanas
+const TWINKLE_MIN = 0.3; // Opacidad mínima
+const TWINKLE_MAX = 1.0; // Opacidad máxima
+const TWINKLE_SPEED = 1.5; // Velocidad de parpadeo
+const FLASH_INTERVAL = 3.5; // Segundos entre flashes fuertes
+let flashTimer = 0;
+let flashStarIndex = -1;
+let flashDuration = 0.5; // Duración del flash fuerte
+let flashElapsed = 0;
+
+// --- Modificar createStarLayers para inicializar estrellas parpadeantes ---
 function createStarLayers() {
     const layerConfigs = [
         { count: 1200, size: 0.25, distance: 900 }, // Estrellas lejanas
@@ -616,11 +945,13 @@ function createStarLayers() {
             sizeAttenuation: true,
             transparent: true,
             blending: THREE.AdditiveBlending,
+            opacity: 1.0,
+            depthWrite: false,
         });
 
         const stars = new THREE.Points(
             layerGeometry,
-            sharedMaterials.starMaterial
+            sharedMaterials.starMaterial.clone()
         );
         stars.frustumCulled = false; // Las estrellas siempre visibles
         scene.add(stars);
@@ -629,6 +960,27 @@ function createStarLayers() {
     console.log(
         `${layerConfigs.length} capas de estrellas optimizadas creadas.`
     );
+
+    // --- Inicializar estrellas parpadeantes solo en la capa más lejana ---
+    const farStars = starLayers[0];
+    const farCount = layerConfigs[0].count;
+    twinkleStarIndices = [];
+    twinkleStarTimers = [];
+    // Solo el 50% de las estrellas lejanas pueden parpadear
+    const twinklePool = [];
+    for (let i = 0; i < farCount; i++) twinklePool.push(i);
+    for (let i = 0; i < TWINKLE_COUNT; i++) {
+        const idx = twinklePool.splice(
+            Math.floor(Math.random() * twinklePool.length),
+            1
+        )[0];
+        twinkleStarIndices.push(idx);
+        twinkleStarTimers.push(Math.random() * Math.PI * 2);
+    }
+    // Inicializar flash
+    flashTimer = 0;
+    flashStarIndex = -1;
+    flashElapsed = 0;
 }
 
 function createPoleVortexes() {
@@ -685,15 +1037,36 @@ function fireProjectile() {
     laser.play();
 
     projectile.visual.scale.set(1, 1, 1);
-    projectile.body.quaternion.copy(player.body.quaternion);
 
+    // --- NUEVO: Disparar hacia donde apunta la mira/cursor ---
+    // 1. Obtener posición de la mira/cursor en NDC
+    const ndcX = (mouseScreenX / window.innerWidth) * 2 - 1;
+    const ndcY = -(mouseScreenY / window.innerHeight) * 2 + 1;
+    // 2. Crear un Raycaster desde la cámara
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+    // 3. Dirección en el mundo
+    const direction = raycaster.ray.direction.clone().normalize();
+    // 4. Posición inicial del proyectil (ligeramente delante del jugador)
     const startPosition = player.body.position.clone();
-    const forward = player.body.quaternion.vmult(new CANNON.Vec3(0, 0, 1));
-    startPosition.vadd(forward.scale(1.5), startPosition);
+    const offset = new CANNON.Vec3(direction.x, direction.y, direction.z).scale(
+        1.5
+    );
+    startPosition.vadd(offset, startPosition);
     projectile.body.position.copy(startPosition);
-
+    // 5. Velocidad del proyectil en esa dirección
     const projectileSpeed = 150;
-    projectile.body.velocity = forward.scale(projectileSpeed);
+    projectile.body.velocity = new CANNON.Vec3(
+        direction.x,
+        direction.y,
+        direction.z
+    ).scale(projectileSpeed);
+    // 6. Orientación visual del proyectil
+    const quat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        direction
+    );
+    projectile.visual.quaternion.copy(quat);
 
     scene.add(projectile.visual);
     world.addBody(projectile.body);
@@ -702,6 +1075,54 @@ function fireProjectile() {
     setTimeout(() => {
         projectilePool.release(projectile);
     }, 3000);
+}
+
+// --- Añadir función para comprobar colisión de esferas ---
+function checkSphereCollision(pos, radius, objects) {
+    for (const obj of objects) {
+        if (!obj.mesh) continue;
+        const objRadius = obj.collisionRadius || 1.0;
+        // Calcular centro del modelo
+        let center = new THREE.Vector3();
+        let found = false;
+        obj.mesh.traverse((child) => {
+            if (
+                child.isMesh &&
+                child.geometry &&
+                child.geometry.boundingSphere
+            ) {
+                const sphere = child.geometry.boundingSphere.clone();
+                sphere.applyMatrix4(child.matrixWorld);
+                center.copy(sphere.center);
+                found = true;
+            }
+        });
+        if (!found) center.copy(obj.mesh.position);
+        const dist = pos.distanceTo(center);
+        if (dist < radius + objRadius + 0.1) {
+            return { collided: true, object: obj };
+        }
+    }
+    return { collided: false };
+}
+
+// --- Añadir función para comprobar colisión con techPlanet ---
+function checkTechPlanetCollision(pos, radius) {
+    if (!techPlanet) return { collided: false };
+    let boundingSphere = null;
+    techPlanet.traverse((child) => {
+        if (child.isMesh && child.geometry && child.geometry.boundingSphere) {
+            boundingSphere = child.geometry.boundingSphere.clone();
+            boundingSphere.applyMatrix4(child.matrixWorld);
+        }
+    });
+    if (boundingSphere) {
+        const dist = pos.distanceTo(boundingSphere.center);
+        if (dist < radius + boundingSphere.radius) {
+            return { collided: true, boundingSphere };
+        }
+    }
+    return { collided: false };
 }
 
 // --- Animación planetaria ---
@@ -753,10 +1174,6 @@ function animate() {
         layer.rotation.x -= rotationSpeed * 0.05;
     });
 
-    poleVortexes.forEach((vortex) => {
-        vortex.rotation.z += 0.005;
-    });
-
     // --- Optimización: Actualizar pool de proyectiles ---
     projectilePool.update();
 
@@ -775,42 +1192,84 @@ function animate() {
                 player.body.applyForce(pushDirection, CANNON.Vec3.ZERO);
             }
 
-            const currentMoveSpeed = keysPressed["ShiftLeft"]
+            // --- Lógica de colisión suave antes de aplicar fuerzas ---
+            const mechaRadius = 0.8 * player.visual.scale.x;
+            const directions = [
+                {
+                    key: "KeyW",
+                    vec: new THREE.Vector3(0, 0, -1),
+                    force: new CANNON.Vec3(0, 0, MOVE_SPEED),
+                },
+                {
+                    key: "KeyA",
+                    vec: new THREE.Vector3(-1, 0, 0),
+                    force: new CANNON.Vec3(MOVE_SPEED, 0, 0),
+                },
+                {
+                    key: "KeyD",
+                    vec: new THREE.Vector3(1, 0, 0),
+                    force: new CANNON.Vec3(-MOVE_SPEED, 0, 0),
+                },
+                {
+                    key: "Space",
+                    vec: new THREE.Vector3(0, 1, 0),
+                    force: new CANNON.Vec3(0, MOVE_SPEED, 0),
+                },
+                {
+                    key: "ControlLeft",
+                    vec: new THREE.Vector3(0, -1, 0),
+                    force: new CANNON.Vec3(0, -MOVE_SPEED, 0),
+                },
+                // --- Intercambio: ahora S es atrás lento, X es atrás rápido ---
+            ];
+            const moveStep = MOVE_SPEED * deltaTime * 0.5;
+            // --- BOOST: Si Shift está presionado, multiplicar la velocidad ---
+            const boostActive =
+                keysPressed["ShiftLeft"] || keysPressed["ShiftRight"];
+            const currentMoveSpeed = boostActive
                 ? MOVE_SPEED * BOOST_MULTIPLIER
                 : MOVE_SPEED;
-
-            // --- Optimización: Reducir creación de objetos ---
-            const forwardForce = new CANNON.Vec3(0, 0, currentMoveSpeed);
-            const leftForce = new CANNON.Vec3(currentMoveSpeed, 0, 0);
-            const rightForce = new CANNON.Vec3(-currentMoveSpeed, 0, 0);
-            const upForce = new CANNON.Vec3(0, currentMoveSpeed, 0);
-            const downForce = new CANNON.Vec3(0, -currentMoveSpeed, 0);
-            const backwardForce = new CANNON.Vec3(0, 0, -MOVE_SPEED / 2);
-
-            if (keysPressed["KeyW"]) {
-                player.body.applyLocalForce(forwardForce, CANNON.Vec3.ZERO);
+            const boostedMoveStep = currentMoveSpeed * deltaTime * 0.5;
+            for (const dir of directions) {
+                if (keysPressed[dir.key]) {
+                    const q = new THREE.Quaternion();
+                    player.visual.getWorldQuaternion(q);
+                    const localDir = dir.vec
+                        .clone()
+                        .applyQuaternion(q)
+                        .normalize();
+                    const tentativePos = new THREE.Vector3(
+                        player.body.position.x,
+                        player.body.position.y,
+                        player.body.position.z
+                    ).add(localDir.clone().multiplyScalar(boostedMoveStep));
+                    const col1 = checkSphereCollision(
+                        tentativePos,
+                        mechaRadius,
+                        floatingObjects
+                    );
+                    const col2 = checkTechPlanetCollision(
+                        tentativePos,
+                        mechaRadius
+                    );
+                    if (!(col1.collided || col2.collided)) {
+                        // --- BOOST: aplicar fuerza aumentada si Shift está activo ---
+                        const force = boostActive
+                            ? dir.force.scale(BOOST_MULTIPLIER)
+                            : dir.force;
+                        player.body.applyLocalForce(force, CANNON.Vec3.ZERO);
+                    }
+                }
             }
-            if (keysPressed["KeyS"]) {
+            // Movimiento hacia atrás y damping lateral
+            // --- Intercambio: ahora X es el que aplica damping fuerte (antes era S) ---
+            if (keysPressed["KeyX"]) {
                 player.body.linearDamping = 0.95;
             } else {
                 player.body.linearDamping = originalLinearDamping;
             }
-            // --- Suavizado específico para movimiento lateral ---
-            if (keysPressed["KeyA"]) {
-                player.body.applyLocalForce(leftForce, CANNON.Vec3.ZERO);
-                // Aplicar damping específico para movimiento lateral
-                const lateralVelocity = player.body.velocity.x;
-                if (Math.abs(lateralVelocity) > 0.1) {
-                    const dampingForce = new CANNON.Vec3(
-                        -lateralVelocity * LATERAL_DAMPING,
-                        0,
-                        0
-                    );
-                    player.body.applyForce(dampingForce, CANNON.Vec3.ZERO);
-                }
-            } else if (keysPressed["KeyD"]) {
-                player.body.applyLocalForce(rightForce, CANNON.Vec3.ZERO);
-                // Aplicar damping específico para movimiento lateral
+            // Lateral damping para A/D
+            if (keysPressed["KeyA"] || keysPressed["KeyD"]) {
                 const lateralVelocity = player.body.velocity.x;
                 if (Math.abs(lateralVelocity) > 0.1) {
                     const dampingForce = new CANNON.Vec3(
@@ -821,7 +1280,6 @@ function animate() {
                     player.body.applyForce(dampingForce, CANNON.Vec3.ZERO);
                 }
             } else {
-                // Cuando no se presionan A ni D, aplicar fuerza suave hacia el centro
                 const lateralVelocity = player.body.velocity.x;
                 if (Math.abs(lateralVelocity) > 0.5) {
                     const returnForce = new CANNON.Vec3(
@@ -832,42 +1290,35 @@ function animate() {
                     player.body.applyForce(returnForce, CANNON.Vec3.ZERO);
                 }
             }
-            if (keysPressed["Space"]) {
-                player.body.applyLocalForce(upForce, CANNON.Vec3.ZERO);
+            // --- Intercambio: ahora S es atrás lento, X es atrás rápido ---
+            if (keysPressed["KeyS"]) {
+                player.body.applyLocalForce(
+                    new CANNON.Vec3(0, 0, -MOVE_SPEED / 2),
+                    CANNON.Vec3.ZERO
+                );
             }
-            if (keysPressed["ControlLeft"]) {
-                player.body.applyLocalForce(downForce, CANNON.Vec3.ZERO);
-            }
-            if (keysPressed["KeyX"]) {
-                player.body.applyLocalForce(backwardForce, CANNON.Vec3.ZERO);
-            }
+            // Disparo
             if (keysPressed["Enter"] && Date.now() - lastFireTime > FIRE_RATE) {
                 fireProjectile();
                 lastFireTime = Date.now();
             }
-
-            const forwardVector = player.body.quaternion.vmult(
-                new CANNON.Vec3(0, 0, 1)
-            );
-            const worldUp = new CANNON.Vec3(0, 1, 0);
-            const dot = forwardVector.dot(worldUp);
-            const localAngularVelocity = new CANNON.Vec3(0, 0, 0);
-
-            if (keysPressed["ArrowUp"]) {
-                if (dot < 0.9) localAngularVelocity.x = -ROTATION_SPEED;
-            } else if (keysPressed["ArrowDown"]) {
-                if (dot > -0.9) localAngularVelocity.x = ROTATION_SPEED;
+            // Permitir disparar con el click izquierdo del ratón
+            if (
+                keysPressed["MouseLeft"] &&
+                Date.now() - lastFireTime > FIRE_RATE
+            ) {
+                fireProjectile();
+                lastFireTime = Date.now();
             }
-            if (keysPressed["ArrowLeft"])
-                localAngularVelocity.y = ROTATION_SPEED;
-            else if (keysPressed["ArrowRight"])
-                localAngularVelocity.y = -ROTATION_SPEED;
-            if (keysPressed["KeyQ"]) localAngularVelocity.z = -ROLL_SPEED;
-            else if (keysPressed["KeyE"]) localAngularVelocity.z = ROLL_SPEED;
-
-            const worldAngularVelocity =
-                player.body.quaternion.vmult(localAngularVelocity);
-            player.body.angularVelocity.copy(worldAngularVelocity);
+            // --- Control de rotación por mouse FPS ---
+            if (isMouseInitialized) {
+                // Construir quaternion a partir de mouseYaw y mousePitch
+                const q = new THREE.Quaternion();
+                q.setFromEuler(new THREE.Euler(mousePitch, mouseYaw, 0, "YXZ"));
+                player.body.quaternion.copy(q);
+            }
+            // --- Lógica de teclado de rotación (sigue funcionando, pero el mouse tiene prioridad)
+            // Si quieres que ambos sumen, puedes combinar los valores en vez de sobrescribir
         }
 
         if (speedIndicator && altitudeIndicator) {
@@ -918,14 +1369,14 @@ function animate() {
         let targetTilt = 0;
         if (keysPressed["KeyW"]) {
             targetTilt = TILT_FORWARD_AMOUNT;
-        } else if (keysPressed["KeyX"] || keysPressed["KeyS"]) {
+        } else if (keysPressed["KeyS"] || keysPressed["KeyX"]) {
             targetTilt = -TILT_BACKWARD_AMOUNT;
         }
         let targetBank = 0;
-        if (keysPressed["ArrowLeft"]) {
-            targetBank = BANK_AMOUNT;
-        } else if (keysPressed["ArrowRight"]) {
+        if (keysPressed["KeyQ"]) {
             targetBank = -BANK_AMOUNT;
+        } else if (keysPressed["KeyE"]) {
+            targetBank = BANK_AMOUNT;
         }
         player.gimbal.rotation.x = THREE.MathUtils.lerp(
             player.gimbal.rotation.x,
@@ -953,23 +1404,107 @@ function animate() {
         camera.lookAt(cameraLookAtTarget);
     }
 
-    if (player.visual && crosshair) {
-        const reticleTargetPosition = new THREE.Vector3(
-            0,
-            0,
-            -RETICLE_DISTANCE
+    // --- Apuntar el mecha hacia donde está la mira (puntero libre) ---
+    if (player.body && camera) {
+        // Convertir la posición del mouse en un rayo en el mundo 3D
+        const mouseNDC = new THREE.Vector2(
+            (mouseScreenX / window.innerWidth) * 2 - 1,
+            -(mouseScreenY / window.innerHeight) * 2 + 1
         );
-        player.visual.localToWorld(reticleTargetPosition);
-        reticleTargetPosition.project(camera);
-        const x = (reticleTargetPosition.x * 0.5 + 0.5) * window.innerWidth;
-        const y = (reticleTargetPosition.y * -0.5 + 0.5) * window.innerHeight;
-        crosshair.style.transform = `translate(-50%, -50%)`;
-        crosshair.style.left = `${x}px`;
-        crosshair.style.top = `${y}px`;
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouseNDC, camera);
+        // Apuntar a un punto lejano en la dirección del rayo
+        const targetPoint = raycaster.ray.origin
+            .clone()
+            .add(
+                raycaster.ray.direction.clone().multiplyScalar(RETICLE_DISTANCE)
+            );
+        // Calcular la rotación necesaria para mirar a ese punto
+        const mechaPos = player.body.position;
+        const lookDir = new THREE.Vector3(
+            targetPoint.x - mechaPos.x,
+            targetPoint.y - mechaPos.y,
+            targetPoint.z - mechaPos.z
+        ).normalize();
+        const up = new THREE.Vector3(0, 1, 0);
+        const quat = new THREE.Quaternion().setFromUnitVectors(
+            new THREE.Vector3(0, 0, 1),
+            lookDir
+        );
+        // Interpolar hacia la rotación objetivo para un giro más rápido pero suave
+        const ROTATE_TO_RETICLE_SPEED = 0.25; // Aumenta este valor para girar aún más rápido (0.0-1.0)
+        player.body.quaternion.slerp(quat, ROTATE_TO_RETICLE_SPEED);
     }
+
+    // --- Elimina el bloque que actualiza la mira visual según la orientación del jugador en el bucle de animación ---
+    // if (player.visual && crosshair) {
+    //     const reticleTargetPosition = new THREE.Vector3(
+    //         0,
+    //         0,
+    //         -RETICLE_DISTANCE
+    //     );
+    //     player.visual.localToWorld(reticleTargetPosition);
+    //     reticleTargetPosition.project(camera);
+    //     const x = (reticleTargetPosition.x * 0.5 + 0.5) * window.innerWidth;
+    //     const y = (reticleTargetPosition.y * -0.5 + 0.5) * window.innerHeight;
+    //     crosshair.style.transform = `translate(-50%, -50%)`;
+    //     crosshair.style.left = `${x}px`;
+    //     crosshair.style.top = `${y}px`;
+    // }
 
     composer.render();
     navball.render();
+
+    // --- Efecto de parpadeo y brillo en las estrellas lejanas ---
+    if (starLayers.length > 0) {
+        const farStars = starLayers[0];
+        const positions = farStars.geometry.getAttribute("position");
+        let sizes = farStars.geometry.getAttribute("size");
+        if (!sizes) {
+            // Crear atributo de tamaño si no existe
+            const arr = new Float32Array(positions.count);
+            arr.fill(farStars.material.size);
+            sizes = new THREE.BufferAttribute(arr, 1);
+            farStars.geometry.setAttribute("size", sizes);
+        }
+        // --- Parpadeo normal ---
+        for (let i = 0; i < TWINKLE_COUNT; i++) {
+            const idx = twinkleStarIndices[i];
+            twinkleStarTimers[i] +=
+                deltaTime * TWINKLE_SPEED * (0.7 + Math.random() * 0.6);
+            // Parpadeo suave seno
+            let twinkle =
+                TWINKLE_MIN +
+                (TWINKLE_MAX - TWINKLE_MIN) *
+                    (0.5 + 0.5 * Math.sin(twinkleStarTimers[i]));
+            let baseSize = farStars.material.size;
+            // --- Flash fuerte ---
+            if (idx === flashStarIndex && flashElapsed > 0) {
+                // Brillo mucho más intenso
+                twinkle = 1.0;
+                baseSize = farStars.material.size * 2.5;
+            }
+            sizes.setX(idx, baseSize * (0.8 + 0.7 * twinkle));
+        }
+        sizes.needsUpdate = true;
+        // Simular parpadeo global cambiando la opacidad del material levemente
+        farStars.material.opacity = 0.85 + 0.15 * Math.sin(elapsedTime * 0.3);
+        // --- Lógica de flash fuerte aleatorio ---
+        flashTimer += deltaTime;
+        if (flashElapsed > 0) {
+            flashElapsed -= deltaTime;
+            if (flashElapsed <= 0) {
+                flashStarIndex = -1;
+            }
+        }
+        if (flashTimer > FLASH_INTERVAL) {
+            flashTimer = 0;
+            flashElapsed = flashDuration;
+            // Elegir una estrella aleatoria del grupo de parpadeo
+            flashStarIndex =
+                twinkleStarIndices[Math.floor(Math.random() * TWINKLE_COUNT)];
+        }
+    }
 }
 
 // --- Función principal de inicialización ---
@@ -1180,3 +1715,59 @@ window.getTechPlanetFrontPosition = function (distance = 8) {
     const frontPos = planetPos.clone().addScaledVector(dir, -distance);
     return { x: frontPos.x, y: frontPos.y, z: frontPos.z };
 };
+
+// --- Variables para control de mouse FPS ---
+let mouseYaw = 0; // Rotación horizontal acumulada
+let mousePitch = 0; // Rotación vertical acumulada
+const PITCH_LIMIT = Math.PI / 2 - 0.1; // Límite para evitar volteretas
+const MOUSE_SENSITIVITY = 0.0025; // Ajusta la sensibilidad aquí
+let isMouseInitialized = false;
+
+// --- Variables para control de puntero libre ---
+let mouseScreenX = window.innerWidth / 2;
+let mouseScreenY = window.innerHeight / 2;
+
+window.addEventListener("mousemove", (event) => {
+    // Solo si el canvas está visible
+    const canvas = document.getElementById("bg");
+    if (!canvas || canvas.style.display === "none") return;
+    mouseScreenX = event.clientX;
+    mouseScreenY = event.clientY;
+    // --- NUEVO: Actualizar la posición de la mira visual ---
+    const crosshair = document.getElementById("crosshair-container");
+    if (crosshair) {
+        crosshair.style.transform = `translate(-50%, -50%)`;
+        crosshair.style.left = `${mouseScreenX}px`;
+        crosshair.style.top = `${mouseScreenY}px`;
+    }
+});
+
+document.addEventListener("mousedown", (event) => {
+    if (event.button === 2 && Date.now() - lastFireTime > FIRE_RATE) {
+        fireProjectile();
+        lastFireTime = Date.now();
+    }
+});
+
+function onMouseMove(event) {
+    // Solo si el canvas está visible
+    const canvas = document.getElementById("bg");
+    if (!canvas || canvas.style.display === "none") return;
+    // Inicializar valores al primer movimiento
+    if (!isMouseInitialized && player.visual) {
+        // Obtener rotación inicial del mecha
+        const euler = new THREE.Euler().setFromQuaternion(
+            player.visual.quaternion,
+            "YXZ"
+        );
+        mouseYaw = euler.y;
+        mousePitch = euler.x;
+        isMouseInitialized = true;
+    }
+    // Movimiento relativo
+    mouseYaw -= event.movementX * MOUSE_SENSITIVITY;
+    mousePitch += event.movementY * MOUSE_SENSITIVITY; // <--- Invertido aquí
+    // Limitar el pitch
+    mousePitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, mousePitch));
+}
+window.addEventListener("mousemove", onMouseMove);

@@ -106,7 +106,7 @@ function animate() {
             isHovering = false;
             // Vuelve al estado normal
             buttonGroup.scale.set(1, 1, 1);
-            document.body.style.cursor = "default";
+            document.body.style.cursor = "auto";
         }
     }
 
