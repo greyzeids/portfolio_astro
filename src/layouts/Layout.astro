@@ -89,5 +89,10 @@ const { title, bodyClass = 'content-body' } = Astro.props;
             });
         }
     });
+
+    // --- PREVENIR EL MENÚ CONTEXTUAL (CLICK DERECHO) EN TODA LA WEB ---
+    window.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+    });
 </script>
 </html>

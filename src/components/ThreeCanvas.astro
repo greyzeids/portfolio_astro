@@ -1,9 +1,7 @@
-<!-- src/components/ThreeCanvas.astro -->
 ---
 import '../styles/game_hud.css';
 ---
 
-<!-- Indicador de carga para Three.js -->
 <div id="three-loading" class="three-loading">
     <div class="loading-spinner"></div>
     <div class="loading-text">Cargando experiencia 3D...</div>
@@ -12,7 +10,6 @@ import '../styles/game_hud.css';
     </div>
 </div>
 
-<!-- Tu canvas y crosshair existentes -->
 <canvas id="bg" style="display: none;"></canvas>
 <div id="crosshair-container" style="display: none;">
     <div class="crosshair-dot"></div>
@@ -22,10 +19,8 @@ import '../styles/game_hud.css';
     <div class="crosshair-bracket bottom-right"></div>
 </div>
 
-<!-- Contenedor para la interfaz del juego (Estructura Actualizada) -->
 <div id="game-hud" style="display: none;">
 
-    <!-- Medidor Izquierdo (Velocidad) -->
     <div class="gauge-container left">
         <div class="vertical-gauge">
             <div class="gauge-track">
@@ -35,13 +30,10 @@ import '../styles/game_hud.css';
                 <span>250</span><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span>
             </div>
         </div>
-        <!-- Etiqueta de texto para la velocidad -->
         <div class="gauge-title">SPEED</div>
     </div>
 
-    <!-- Medidor Derecho (Altitud) -->
     <div class="gauge-container right">
-        <!-- Etiqueta de texto para la altitud -->
         <div class="gauge-title">ALTITUDE</div>
         <div class="vertical-gauge">
              <div class="gauge-track">
@@ -52,9 +44,7 @@ import '../styles/game_hud.css';
             </div>
         </div>
     </div>
-    <!-- Canvas donde dibujaremos la brújula 3D -->
     <canvas id="compass-canvas"></canvas>
-    <!-- Un marco estético para decorar la brújula -->
     <div id="compass-frame"></div>
 </div>
 
@@ -122,8 +112,6 @@ import '../styles/game_hud.css';
 <script>
     // --- Lazy Loading Manager para Three.js ---
     class ThreeJSLoader {
-        private isLoading: boolean;
-        private isLoaded: boolean;
         private loadingElement: HTMLElement | null;
         private canvas: HTMLCanvasElement | null;
         private crosshair: HTMLElement | null;
@@ -131,9 +119,10 @@ import '../styles/game_hud.css';
         private progressBar: HTMLElement | null;
         private loadingText: HTMLElement | null;
 
+        // Almacena la función de inicialización de la experiencia 3D
+        private initExperienceFunction: (() => Promise<void>) | null = null;
+
         constructor() {
-            this.isLoading = false;
-            this.isLoaded = false;
             this.loadingElement = document.getElementById('three-loading');
             this.canvas = document.getElementById('bg') as HTMLCanvasElement;
             this.crosshair = document.getElementById('crosshair-container');
@@ -150,69 +139,79 @@ import '../styles/game_hud.css';
             this.showLoading();
             
             try {
-                // Simular progreso de carga
-                this.updateProgress(10, 'Cargando librerías 3D...');
+                this.updateProgress(10, 'Preparando entorno 3D...');
                 
-                // Cargar Three.js dinámicamente
-                await this.loadThreeJS();
-                this.updateProgress(30, 'Inicializando escena...');
+                // Cargar el módulo que contiene Three.js y/o la lógica de la experiencia
+                const module = await this.importThreeExperienceModule();
                 
-                // Cargar la experiencia 3D
-                await this.loadThreeExperience();
-                this.updateProgress(70, 'Configurando controles...');
+                this.updateProgress(50, 'Inicializando componentes 3D...');
+
+                // Intentar encontrar y ejecutar la función de inicialización
+                if (module && typeof module.default === 'function') {
+                    this.initExperienceFunction = module.default;
+                    console.log('✅ Función de inicialización por defecto encontrada y lista para ejecutar.');
+                } else if (module && typeof module.initThreeExperience === 'function') {
+                    this.initExperienceFunction = module.initThreeExperience;
+                    console.log('✅ Función de inicialización "initThreeExperience" encontrada y lista para ejecutar.');
+                } else {
+                    console.warn('⚠️ No se encontró una función de inicialización "default" o "initThreeExperience" exportada. Asumiendo que three-experience.js se inicializa automáticamente al importarse.');
+                    this.initExperienceFunction = async () => {}; // Función vacía para no romper el flujo
+                }
+
+                if (this.initExperienceFunction) {
+                    this.updateProgress(75, 'Ejecutando experiencia 3D...');
+                    await this.initExperienceFunction();
+                    console.log('✅ Experiencia 3D ejecutada exitosamente.');
+                }
                 
-                // Finalizar carga
-                this.updateProgress(100, '¡Listo para explorar!');
-                await this.delay(500);
+                // Finalizar carga visual
+                this.updateProgress(100, '¡Carga completa! Entrando en el mundo 3D...');
+                await this.delay(500); // Pequeño retraso para que el usuario vea el 100%
                 
                 // Ocultar loading y mostrar experiencia
                 this.hideLoading();
                 this.showExperience();
                 
-                console.log('✅ Three.js cargado exitosamente');
+                console.log('🎉 Experiencia 3D visible.');
                 
             } catch (error) {
-                console.error('❌ Error cargando Three.js:', error);
-                this.showError('Error al cargar la experiencia 3D');
-            }
-        }
-
-        // Cargar Three.js dinámicamente
-        async loadThreeJS(): Promise<void> {
-            // Verificar si Three.js ya está disponible
-            if ((window as any).THREE) {
-                console.log('Three.js ya está cargado');
-                return;
-            }
-
-            // Cargar Three.js desde CDN o bundle
-            return new Promise<void>((resolve, reject) => {
-                // En desarrollo, usamos el import dinámico
-                // En producción, podrías cargar desde CDN
-                import('../scripts/three-experience.js')
-                    .then(() => {
-                        console.log('Three.js cargado dinámicamente');
-                        resolve();
-                    })
-                    .catch(reject);
-            });
-        }
-
-        // Cargar la experiencia 3D
-        async loadThreeExperience(): Promise<void> {
-            try {
-                // Importar y ejecutar la experiencia 3D
-                const { default: initThreeExperience } = await import('../scripts/three-experience.js');
+                console.error('❌ Error crítico durante la carga o inicialización de Three.js:', error);
                 
-                if (typeof initThreeExperience === 'function') {
-                    await initThreeExperience();
-                } else {
-                    // Si no hay función de inicialización, asumimos que se ejecuta automáticamente
-                    console.log('Experiencia 3D inicializada automáticamente');
+                // --- INICIO DE LA CORRECCIÓN para 'error' is of type 'unknown' ---
+                let errorMessage = 'Desconocido';
+                if (error instanceof Error) {
+                    errorMessage = error.message;
+                } else if (typeof error === 'string') {
+                    errorMessage = error;
                 }
+                // --- FIN DE LA CORRECCIÓN ---
+
+                this.showError(`Error al cargar la experiencia 3D: ${errorMessage}`);
+            }
+        }
+
+        // Importar dinámicamente el módulo three-experience.js
+        async importThreeExperienceModule(): Promise<any> {
+            this.updateProgress(30, 'Cargando módulo de experiencia Three.js...');
+            try {
+                // Importación dinámica del módulo
+                const module = await import('../scripts/three-experience.js');
+                console.log('✅ Módulo three-experience.js importado con éxito.');
+                return module;
             } catch (error) {
-                console.error('Error cargando experiencia 3D:', error);
-                throw error;
+                console.error('❌ Error al importar ../scripts/three-experience.js:', error);
+                
+                // --- INICIO DE LA CORRECCIÓN para 'error' is of type 'unknown' ---
+                let errorMessage = 'Verifica la ruta o el contenido del archivo';
+                if (error instanceof Error) {
+                    errorMessage = error.message;
+                } else if (typeof error === 'string') {
+                    errorMessage = error;
+                }
+                // --- FIN DE LA CORRECCIÓN ---
+
+                this.showError(`Fallo al cargar el módulo 3D: ${errorMessage}`);
+                throw error; // Propagar el error para que init() lo capture
             }
         }
 
@@ -220,6 +219,7 @@ import '../styles/game_hud.css';
         showLoading() {
             if (this.loadingElement) {
                 this.loadingElement.style.display = 'flex';
+                this.loadingElement.classList.remove('hidden'); 
             }
         }
 
@@ -228,8 +228,10 @@ import '../styles/game_hud.css';
             if (this.loadingElement) {
                 this.loadingElement.classList.add('hidden');
                 setTimeout(() => {
-                    this.loadingElement.style.display = 'none';
-                }, 500);
+                    if (this.loadingElement) {
+                        this.loadingElement.style.display = 'none';
+                    }
+                }, 500); 
             }
         }
 
@@ -250,11 +252,15 @@ import '../styles/game_hud.css';
             }
         }
 
-        // Mostrar error
+        // Mostrar error en el indicador de carga
         showError(message: string): void {
             if (this.loadingText) {
                 this.loadingText.textContent = message;
-                this.loadingText.style.color = '#ff4444';
+                this.loadingText.style.color = '#ff4444'; 
+            }
+            const spinner = document.querySelector('.loading-spinner');
+            if (spinner) {
+                (spinner as HTMLElement).style.display = 'none';
             }
         }
 
@@ -266,16 +272,12 @@ import '../styles/game_hud.css';
 
     // --- Inicialización cuando el DOM esté listo ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Marcar que estamos usando lazy loading
         (window as any).THREE_LAZY_LOADING = true;
         
         const threeLoader = new ThreeJSLoader();
         
-        // Iniciar carga después de un pequeño delay para mejor UX
         setTimeout(() => {
-            if (threeLoader) {
-                threeLoader.init();
-            }
+            threeLoader.init();
         }, 100);
     });
 </script>
