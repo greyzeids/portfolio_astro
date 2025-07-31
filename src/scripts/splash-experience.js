@@ -97,16 +97,14 @@ function animate() {
     if (intersects.length > 0) {
         if (!isHovering) {
             isHovering = true;
-            // Efecto al hacer hover: escala ligeramente y cambia el cursor
+            // Efecto al hacer hover: escala ligeramente
             buttonGroup.scale.set(1.1, 1.1, 1.1);
-            document.body.style.cursor = "pointer";
         }
     } else {
         if (isHovering) {
             isHovering = false;
             // Vuelve al estado normal
             buttonGroup.scale.set(1, 1, 1);
-            document.body.style.cursor = "auto";
         }
     }
 

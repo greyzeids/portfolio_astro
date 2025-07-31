@@ -54,7 +54,7 @@
     width: 300px;
 }
 .bar-label {
-    text-align: left;
+    text-align: right;
     font-size: 0.8rem;
     margin-bottom: 5px;
     text-transform: uppercase;

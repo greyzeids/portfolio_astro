@@ -10,7 +10,7 @@ body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     background-color: #000033;
     color: #e0e0e0;
-    cursor: none !important;
+    cursor: none;
 }
 
 /* Eliminado: reglas de cursor para no ocultar el cursor en ningún estado */
@@ -351,14 +351,30 @@ body {
     border-width: 0 2px 2px 0; /* Borde inferior y derecho */
 }
 
+a,
+button,
+input,
+textarea,
+select,
+.social-icon,
+.connect-button-header {
+    cursor: none !important;
+}
+
 .custom-cursor {
     position: fixed;
-    width: 12px;
-    height: 12px;
-    background: #fff;
-    border: 2px solid #000;
-    border-radius: 2px;
+    width: 7px;
+    height: 7px;
+    background: #00ff7f;
+    border-radius: 0;
     pointer-events: none;
     z-index: 9999;
-    mix-blend-mode: difference;
+    box-shadow: 0 0 5px #00ff7f;
+    transform: translate(-50%, -50%);
+    transition: none;
+}
+
+/* Forzar que nunca aparezca la manito en ningún elemento interactivo */
+body * {
+    cursor: none !important;
 }
