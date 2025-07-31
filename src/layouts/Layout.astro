@@ -40,6 +40,9 @@ const { title, bodyClass = 'content-body' } = Astro.props;
     </header>
 
     <slot />
+    
+    <!-- Cursor personalizado -->
+    <div class="custom-cursor" id="custom-cursor"></div>
 </body>
 
 <script>
@@ -93,6 +96,18 @@ const { title, bodyClass = 'content-body' } = Astro.props;
     // --- PREVENIR EL MENÚ CONTEXTUAL (CLICK DERECHO) EN TODA LA WEB ---
     window.addEventListener('contextmenu', function(e) {
         e.preventDefault();
+    });
+
+    // --- CURSOR PERSONALIZADO ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const cursor = document.getElementById('custom-cursor');
+        
+        if (cursor) {
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            });
+        }
     });
 </script>
 </html>
