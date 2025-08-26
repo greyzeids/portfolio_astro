@@ -5,6 +5,7 @@ import Navball from "./navball.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { TechStackEffect } from "./TechStackEffect.js";
 
 // --- Configuración Esencial ---
 const scene = new THREE.Scene();
@@ -102,6 +103,19 @@ class ProjectilePool {
             if (projectile.active) {
                 projectile.visual.position.copy(projectile.body.position);
                 projectile.visual.quaternion.copy(projectile.body.quaternion);
+                // Colisión con planeta tech: explotar y limpiar
+                const hit = checkTechPlanetCollision(
+                    projectile.body.position,
+                    0.2
+                );
+                if (hit.collided) {
+                    explodeTechPlanet(
+                        hit.boundingSphere.center,
+                        hit.boundingSphere.radius
+                    );
+                    this.release(projectile);
+                    return false;
+                }
                 return true;
             }
             return false;
@@ -166,6 +180,21 @@ const bloomPass = new UnrealBloomPass(
     0.9 // Aumentar threshold
 );
 composer.addPass(bloomPass);
+
+// --- FX de explosión (variables globales) ---
+let originalBloomStrength = bloomPass.strength;
+let explosionFlashTime = 0;
+let explosionFlashDuration = 0.6;
+let explosionBloomBoost = 1.2;
+
+let cameraShakeTime = 0;
+let cameraShakeDuration = 0.6;
+let cameraShakeIntensity = 0.6;
+
+let shockwaveMesh = null;
+let shockwaveTime = 0;
+let shockwaveDuration = 0.8;
+let shockwaveFinalScale = 30;
 
 const world = new CANNON.World();
 world.gravity.set(0, 0, 0);
@@ -258,6 +287,11 @@ let starLayers = [];
 let poleVortexes = [];
 let player = { visual: null, body: null, gimbal: null };
 let techPlanet = null; // Variable para el planeta del tech-stack
+let techStackEffect = null; // Efecto de logos en la misma escena
+let lastTechExplosionCenter = null; // Centro de la última explosión
+let techShowcaseActive = false; // Cámara en modo vitrina de logos
+let techShowcaseTarget = new THREE.Vector3();
+let techShowcaseOffset = new THREE.Vector3(0, 6, 16);
 
 // --- Variables para los objetos flotantes ---
 const FLOATING_MODELS = [
@@ -1077,6 +1111,40 @@ function fireProjectile() {
     }, 3000);
 }
 
+function fireProjectileTowards(targetVec3) {
+    const projectile = projectilePool.get();
+    if (!projectile || !player.body) return;
+    const origin = player.body.position.clone();
+    const direction = new THREE.Vector3(
+        targetVec3.x - origin.x,
+        targetVec3.y - origin.y,
+        targetVec3.z - origin.z
+    ).normalize();
+
+    const offset = new CANNON.Vec3(direction.x, direction.y, direction.z).scale(
+        1.5
+    );
+    const startPosition = origin.clone();
+    startPosition.vadd(offset, startPosition);
+    projectile.body.position.copy(startPosition);
+
+    projectile.body.velocity = new CANNON.Vec3(
+        direction.x,
+        direction.y,
+        direction.z
+    ).scale(150);
+    const quat = new THREE.Quaternion().setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        direction
+    );
+    projectile.visual.quaternion.copy(quat);
+
+    scene.add(projectile.visual);
+    world.addBody(projectile.body);
+
+    setTimeout(() => projectilePool.release(projectile), 3000);
+}
+
 // --- Añadir función para comprobar colisión de esferas ---
 function checkSphereCollision(pos, radius, objects) {
     for (const obj of objects) {
@@ -1125,6 +1193,79 @@ function checkTechPlanetCollision(pos, radius) {
     return { collided: false };
 }
 
+// --- Explosión del planeta Tech ---
+let techExplosionActive = false;
+const techExplosionParticles = [];
+window.onTechPlanetExploded = null;
+
+function explodeTechPlanet(center, radius = 10) {
+    if (!techPlanet) return;
+    if (techPlanet.parent) techPlanet.parent.remove(techPlanet);
+    if (techPlanet.body && world) world.removeBody(techPlanet.body);
+    techPlanet = null;
+
+    lastTechExplosionCenter = center.clone
+        ? center.clone()
+        : new THREE.Vector3(center.x, center.y, center.z);
+
+    techExplosionActive = true;
+
+    // 1) Flash de bloom
+    originalBloomStrength = bloomPass.strength;
+    bloomPass.strength = originalBloomStrength + explosionBloomBoost;
+    explosionFlashTime = explosionFlashDuration;
+
+    // 2) Cámara shake
+    cameraShakeTime = cameraShakeDuration;
+
+    // 3) Onda expansiva (shockwave)
+    const ringGeo = new THREE.RingGeometry(radius * 0.7, radius * 0.72, 48);
+    const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x88ccff,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+    });
+    shockwaveMesh = new THREE.Mesh(ringGeo, ringMat);
+    shockwaveMesh.position.copy(center);
+    shockwaveMesh.lookAt(camera.position);
+    scene.add(shockwaveMesh);
+    shockwaveTime = shockwaveDuration;
+
+    const COUNT = 80;
+    for (let i = 0; i < COUNT; i++) {
+        const sprite = new THREE.Sprite(
+            new THREE.SpriteMaterial({
+                map: projectilePool.texture,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthWrite: false,
+                opacity: 0.9 - Math.random() * 0.3,
+                color: new THREE.Color().setHSL(
+                    0.55 + Math.random() * 0.1,
+                    1,
+                    0.6
+                ),
+            })
+        );
+        sprite.position.copy(center);
+        const s = 1 + Math.random() * 2.2;
+        sprite.scale.set(s, s, s);
+        const velocity = new THREE.Vector3(
+            Math.random() - 0.5,
+            Math.random() - 0.5,
+            Math.random() - 0.5
+        )
+            .normalize()
+            .multiplyScalar(25 + Math.random() * 55);
+        const life = 0.8 + Math.random() * 0.8;
+        techExplosionParticles.push({ sprite, velocity, life });
+        scene.add(sprite);
+    }
+}
+
 // --- Animación planetaria ---
 function animate() {
     requestAnimationFrame(animate);
@@ -1156,6 +1297,91 @@ function animate() {
         window.TRAVEL_ANIMATION(deltaTime);
     }
 
+    // --- Partículas de explosión del planeta ---
+    if (techExplosionActive) {
+        // Decaimiento del flash de bloom
+        if (explosionFlashTime > 0) {
+            explosionFlashTime -= deltaTime;
+            const t = Math.max(explosionFlashTime / explosionFlashDuration, 0);
+            bloomPass.strength =
+                originalBloomStrength + explosionBloomBoost * t;
+        } else {
+            bloomPass.strength = originalBloomStrength;
+        }
+
+        // Actualizar shockwave
+        if (shockwaveTime > 0 && shockwaveMesh) {
+            shockwaveTime -= deltaTime;
+            const k = 1 - Math.max(shockwaveTime / shockwaveDuration, 0);
+            const scale = 1 + k * shockwaveFinalScale;
+            shockwaveMesh.scale.set(scale, scale, scale);
+            shockwaveMesh.material.opacity = 0.9 * (1 - k);
+            shockwaveMesh.lookAt(camera.position);
+            if (shockwaveTime <= 0) {
+                scene.remove(shockwaveMesh);
+                shockwaveMesh.geometry.dispose();
+                shockwaveMesh.material.dispose();
+                shockwaveMesh = null;
+            }
+        }
+
+        // Cámara shake amortiguado
+        if (cameraShakeTime > 0) {
+            cameraShakeTime -= deltaTime;
+            const falloff = cameraShakeTime / cameraShakeDuration;
+            const shake = cameraShakeIntensity * falloff;
+            camera.position.x += (Math.random() - 0.5) * shake;
+            camera.position.y += (Math.random() - 0.5) * shake * 0.6;
+        }
+
+        for (let i = techExplosionParticles.length - 1; i >= 0; i--) {
+            const p = techExplosionParticles[i];
+            p.life -= deltaTime;
+            p.sprite.position.addScaledVector(p.velocity, deltaTime);
+            p.sprite.material.opacity = Math.max(p.life, 0);
+            if (p.life <= 0) {
+                scene.remove(p.sprite);
+                techExplosionParticles.splice(i, 1);
+            }
+        }
+        if (techExplosionParticles.length === 0) {
+            techExplosionActive = false;
+            // Al finalizar, mostrar logos en esta misma escena
+            if (!techStackEffect) {
+                techStackEffect = new TechStackEffect(
+                    scene,
+                    world,
+                    camera,
+                    renderer
+                );
+                techStackEffect.setTechLogoUrls([
+                    "/models/tech-logos/react.glb",
+                    "/models/tech-logos/html5.glb",
+                    "/models/tech-logos/css3.glb",
+                ]);
+                // Preload y spawnear alrededor del centro de explosión
+                techStackEffect.preloadTechLogos().then(() => {
+                    const c =
+                        lastTechExplosionCenter || new THREE.Vector3(0, 0, 0);
+                    techStackEffect.spawnTechLogosAround(
+                        { x: c.x, y: c.y, z: c.z },
+                        6
+                    );
+                    techShowcaseTarget.set(c.x, c.y, c.z);
+                    techShowcaseActive = true;
+                });
+            } else {
+                const c = lastTechExplosionCenter || new THREE.Vector3(0, 0, 0);
+                techStackEffect.spawnTechLogosAround(
+                    { x: c.x, y: c.y, z: c.z },
+                    6
+                );
+                techShowcaseTarget.set(c.x, c.y, c.z);
+                techShowcaseActive = true;
+            }
+        }
+    }
+
     // --- Optimización: Frustum culling ---
     projScreenMatrix.multiplyMatrices(
         camera.projectionMatrix,
@@ -1165,6 +1391,15 @@ function animate() {
 
     if (deltaTime > 0) {
         world.step(1 / 60, deltaTime, 3);
+    }
+
+    // --- Modo vitrina: fijar cámara a los logos ---
+    if (techShowcaseActive) {
+        // Colocar cámara a un offset fijo respecto al centro de logos y mirar al centro
+        const desiredPos = techShowcaseTarget.clone().add(techShowcaseOffset);
+        camera.position.lerp(desiredPos, 0.08);
+        camera.lookAt(techShowcaseTarget);
+        // Opcional: tras unos segundos, salir del modo vitrina (no hacemos nada por ahora)
     }
 
     // --- Optimización: Animaciones más eficientes ---
@@ -1390,7 +1625,11 @@ function animate() {
         );
     }
 
-    if (player.visual) {
+    if (
+        player.visual &&
+        !window.PLAYER_CONTROLS_DISABLED &&
+        !techShowcaseActive
+    ) {
         const cameraOffset = new THREE.Vector3(0, 0, -cameraZoomLevel);
         cameraOffset.applyQuaternion(player.visual.quaternion);
         const targetCameraPosition = player.visual.position
@@ -1405,7 +1644,12 @@ function animate() {
     }
 
     // --- Apuntar el mecha hacia donde está la mira (puntero libre) ---
-    if (player.body && camera) {
+    if (
+        player.body &&
+        camera &&
+        !window.PLAYER_CONTROLS_DISABLED &&
+        !techShowcaseActive
+    ) {
         // Convertir la posición del mouse en un rayo en el mundo 3D
         const mouseNDC = new THREE.Vector2(
             (mouseScreenX / window.innerWidth) * 2 - 1,
@@ -1706,13 +1950,21 @@ window.movePlayerToTechPlanet = function (planetPosition, onArrive) {
  * @param {number} distance - Distancia desde el centro del planeta.
  * @returns {{x:number, y:number, z:number}}
  */
-window.getTechPlanetFrontPosition = function (distance = 8) {
+window.getTechPlanetFrontPosition = function (buffer = 6) {
     if (!techPlanet) return { x: 0, y: 0, z: 0 };
-    // Vector desde el centro de la escena al planeta
+    // Calcular boundingSphere mundial del planeta
+    let sphere = null;
+    techPlanet.traverse((child) => {
+        if (child.isMesh && child.geometry && child.geometry.boundingSphere) {
+            const s = child.geometry.boundingSphere.clone();
+            s.applyMatrix4(child.matrixWorld);
+            if (!sphere || s.radius > sphere.radius) sphere = s;
+        }
+    });
     const planetPos = techPlanet.position.clone();
     const dir = planetPos.clone().normalize();
-    // Posición a 'distance' unidades antes de llegar al planeta
-    const frontPos = planetPos.clone().addScaledVector(dir, -distance);
+    const radius = sphere ? sphere.radius : 8;
+    const frontPos = planetPos.clone().addScaledVector(dir, -(radius + buffer));
     return { x: frontPos.x, y: frontPos.y, z: frontPos.z };
 };
 
@@ -1771,3 +2023,17 @@ function onMouseMove(event) {
     mousePitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, mousePitch));
 }
 window.addEventListener("mousemove", onMouseMove);
+
+// Secuencia viajar -> disparo -> explosión -> callback
+window.startTechStackVisit = function (onComplete) {
+    const front = window.getTechPlanetFrontPosition(6);
+    window.movePlayerToTechPlanet(front, () => {
+        if (techPlanet) {
+            fireProjectileTowards(techPlanet.position);
+        }
+        window.onTechPlanetExploded = () => {
+            window.onTechPlanetExploded = null;
+            if (typeof onComplete === "function") onComplete();
+        };
+    });
+};

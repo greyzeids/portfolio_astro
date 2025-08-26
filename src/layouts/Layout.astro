@@ -73,20 +73,19 @@ const { title, bodyClass = 'content-body' } = Astro.props;
         const techStackLink = Array.from(document.querySelectorAll('.main-header nav a')).find(a => a.getAttribute('href') === '/tech-stack');
         if (techStackLink) {
             techStackLink.addEventListener('click', function(e) {
-                // Si existe la función global movePlayerToTechPlanet, la usamos
                 const win = window as any;
-                if (win.movePlayerToTechPlanet) {
+                if (win.startTechStackVisit) {
                     e.preventDefault();
-                    // Calcular la posición enfrente del planeta
+                    // Mostrar logos en el mismo universo; no redirigir
+                    win.startTechStackVisit(() => {
+                        // Nada: los logos se muestran en la escena actual
+                    });
+                } else if (win.movePlayerToTechPlanet) {
+                    e.preventDefault();
                     const planetFront = win.getTechPlanetFrontPosition ? win.getTechPlanetFrontPosition(8) : { x: 0, y: 0, z: -8 };
                     console.log('Viajando a posición enfrente del planeta:', planetFront);
                     win.movePlayerToTechPlanet(planetFront, async () => {
-                        // Al llegar, mostrar los logos alrededor del planeta si existe TechStackEffect
-                        if (win.showTechLogos) {
-                            win.showTechLogos();
-                        }
-                        // NO redirigir automáticamente - dejar que el usuario vea la animación
-                        // window.location.href = '/tech-stack';
+                        // Fallback antiguo: sin redirigir
                     });
                 }
             });
