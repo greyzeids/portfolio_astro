@@ -1676,7 +1676,7 @@ function animate() {
             lookDir
         );
         // Interpolar hacia la rotación objetivo para un giro más rápido pero suave
-        const ROTATE_TO_RETICLE_SPEED = 0.25; // Aumenta este valor para girar aún más rápido (0.0-1.0)
+        const ROTATE_TO_RETICLE_SPEED = 0.9; // Aumenta este valor para girar aún más rápido (0.0-1.0)
         player.body.quaternion.slerp(quat, ROTATE_TO_RETICLE_SPEED);
     }
 
