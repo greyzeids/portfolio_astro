@@ -9,7 +9,7 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.11.1",
+    "astro": "^5.13.7",
     "cannon-es": "^0.20.0",
     "three": "^0.177.0"
   },
