@@ -1,15 +1,43 @@
 ---
-
 ---
-<audio id="background-music" loop style="display: none;">
+<audio id="background-music" loop autoplay style="display: none;">
   <source src="/sounds/background.mp3" type="audio/mpeg">
   Tu navegador no soporta el elemento de audio.
 </audio>
 
+<button id="mute-button" style="position: fixed; bottom: 20px; right: 20px; background: none; border: none; cursor: pointer; z-index: 1000;">
+  <img id="mute-icon" src="/icons/sound-on.svg" alt="Mute/Unmute" style="width: 32px; height: 32px;">
+</button>
+
 <script>
   const backgroundMusic = document.getElementById('background-music');
-  if (backgroundMusic instanceof HTMLAudioElement) {
-    // Puedes ajustar el volumen si quieres
+  const muteButton = document.getElementById('mute-button');
+  const muteIcon = document.getElementById('mute-icon');
+
+  if (backgroundMusic instanceof HTMLAudioElement && muteButton && muteIcon instanceof HTMLImageElement) {
+    // Autoplay might be blocked by the browser, so we try to play it here.
+    // Modern browsers require user interaction to play audio.
+    // The 'autoplay' attribute might not be enough.
+    let playPromise = backgroundMusic.play();
+    if (playPromise !== undefined) {
+      playPromise.then(_ => {
+        // Automatic playback started!
+      }).catch(error => {
+        // Auto-play was prevented
+        // We can't do much here, the user needs to interact with the page.
+        console.log("Auto-play was prevented.", error);
+      });
+    }
+    
     backgroundMusic.volume = 0.7;
+
+    muteButton.addEventListener('click', () => {
+      backgroundMusic.muted = !backgroundMusic.muted;
+      if (backgroundMusic.muted) {
+        muteIcon.src = '/icons/sound-off.svg';
+      } else {
+        muteIcon.src = '/icons/sound-on.svg';
+      }
+    });
   }
 </script>
